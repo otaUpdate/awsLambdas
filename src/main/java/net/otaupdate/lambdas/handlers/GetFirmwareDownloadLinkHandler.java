@@ -1,21 +1,16 @@
-package net.otaupdate.lambdas;
-
+package net.otaupdate.lambdas.handlers;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-
-import net.otaupdate.lambdas.checkForUpdate.model.DatabaseManager;
-import net.otaupdate.lambdas.checkForUpdate.model.DownloadableFirmwareImage;
-import net.otaupdate.lambdas.checkForUpdate.model.FirmwareIdentifier;
-import net.otaupdate.util.ErrorManager;
-import net.otaupdate.util.Logger;
-import net.otaupdate.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.model.DatabaseManager;
+import net.otaupdate.lambdas.model.DownloadableFirmwareImage;
+import net.otaupdate.lambdas.model.FirmwareIdentifier;
+import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class GetFirmwareDownloadLink implements RequestHandler<HashMap<?,?>, Object>
+public class GetFirmwareDownloadLinkHandler extends AbstractMultiplexedRequestHandler
 {
 	@SuppressWarnings("unused")
 	private class ReturnValue
@@ -45,12 +40,9 @@ public class GetFirmwareDownloadLink implements RequestHandler<HashMap<?,?>, Obj
 	
 
 	@Override
-	public Object handleRequest(HashMap<?,?> paramsIn, Context context)
+	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
 	{
-		// initialize our logger
-    	new Logger(context);
-    
-    	// parse our parameters
+		// parse our parameters
     	Object currentFirmwareUuid_raw = paramsIn.get("targetFirmwareUuid");
     	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
     	{

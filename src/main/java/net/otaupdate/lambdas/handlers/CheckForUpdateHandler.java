@@ -1,20 +1,15 @@
-package net.otaupdate.lambdas;
-
+package net.otaupdate.lambdas.handlers;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-
-import net.otaupdate.lambdas.checkForUpdate.model.DatabaseManager;
-import net.otaupdate.lambdas.checkForUpdate.model.HardwareIdentifier;
-import net.otaupdate.util.ErrorManager;
-import net.otaupdate.util.Logger;
-import net.otaupdate.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.model.DatabaseManager;
+import net.otaupdate.lambdas.model.FirmwareIdentifier;
+import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class GetLatestVersionLambda implements RequestHandler<HashMap<?,?>, Object>
+public class CheckForUpdateHandler extends AbstractMultiplexedRequestHandler
 {
 	private class ReturnValue
 	{
@@ -29,22 +24,19 @@ public class GetLatestVersionLambda implements RequestHandler<HashMap<?,?>, Obje
 		}
 	}
 	
-	
+
 	@Override
-    public Object handleRequest(HashMap<?,?> paramsIn, Context context)
-    {
-    	// initialize our logger
-    	new Logger(context);
-    
-    	// parse our parameters
-    	Object currentHardwareUuid_raw = paramsIn.get("hardwareUuid");
-    	if( (currentHardwareUuid_raw == null) || !(currentHardwareUuid_raw instanceof String) )
+	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
+	{
+		// parse our parameters
+    	Object currentFirmwareUuid_raw = paramsIn.get("currentFirmwareUuid");
+    	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
     	{
     		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
     	}
-    	
-    	// get our hardware identifier
-    	HardwareIdentifier hi = new HardwareIdentifier((String)currentHardwareUuid_raw);
+    
+    	// get our firmware identifier
+    	FirmwareIdentifier fi = new FirmwareIdentifier((String)currentFirmwareUuid_raw);
     	
     	// setup a connection to our database
     	DatabaseManager dbMan = null;
@@ -55,8 +47,8 @@ public class GetLatestVersionLambda implements RequestHandler<HashMap<?,?>, Obje
     	try
     	{
     		// figure out our target version
-    		String targetVersion = dbMan.getLatestFirmwareUuid(hi);
-    	
+    		String targetVersion = dbMan.getLatestFirmwareUuid(fi);
+    		
 	    	// 	encode our return value
     		retVal = new ReturnValue(targetVersion);
     	}
@@ -70,5 +62,6 @@ public class GetLatestVersionLambda implements RequestHandler<HashMap<?,?>, Obje
     	}
     	
     	return retVal;
-    }
+	}
+
 }

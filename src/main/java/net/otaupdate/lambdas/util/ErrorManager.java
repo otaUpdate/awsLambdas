@@ -1,4 +1,4 @@
-package net.otaupdate.util;
+package net.otaupdate.lambdas.util;
 
 
 public class ErrorManager

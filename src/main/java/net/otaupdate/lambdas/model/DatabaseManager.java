@@ -1,4 +1,4 @@
-package net.otaupdate.lambdas.checkForUpdate.model;
+package net.otaupdate.lambdas.model;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -6,7 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import net.otaupdate.util.Logger;
+import net.otaupdate.lambdas.util.Logger;
 
 
 public class DatabaseManager

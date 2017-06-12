@@ -8,7 +8,7 @@ import org.junit.Test;
 
 import com.amazonaws.services.lambda.runtime.Context;
 
-import net.otaupdate.lambdas.CheckForUpdateLambda;
+import net.otaupdate.lambdas.MainLambda;
 
 /**
  * A simple test harness for locally invoking your Lambda function handler.
@@ -34,7 +34,7 @@ public class LambdaFunctionHandlerTest {
 
     @Test
     public void testLambdaFunctionHandler() {
-        CheckForUpdateLambda handler = new CheckForUpdateLambda();
+        MainLambda handler = new MainLambda();
         Context ctx = createContext();
 
 //        String output = handler.handleRequest(input, ctx);

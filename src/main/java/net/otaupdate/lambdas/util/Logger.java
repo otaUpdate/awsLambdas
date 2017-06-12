@@ -1,4 +1,4 @@
-package net.otaupdate.util;
+package net.otaupdate.lambdas.util;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;

@@ -1,19 +1,15 @@
-package net.otaupdate.lambdas;
+package net.otaupdate.lambdas.handlers;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-
-import net.otaupdate.lambdas.checkForUpdate.model.DatabaseManager;
-import net.otaupdate.lambdas.checkForUpdate.model.FirmwareIdentifier;
-import net.otaupdate.util.ErrorManager;
-import net.otaupdate.util.ErrorManager.ErrorType;
-import net.otaupdate.util.Logger;
+import net.otaupdate.lambdas.model.DatabaseManager;
+import net.otaupdate.lambdas.model.HardwareIdentifier;
+import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class CheckForUpdateLambda implements RequestHandler<HashMap<?,?>, Object>
+public class GetLatestVersionHandler extends AbstractMultiplexedRequestHandler
 {
 	private class ReturnValue
 	{
@@ -28,22 +24,19 @@ public class CheckForUpdateLambda implements RequestHandler<HashMap<?,?>, Object
 		}
 	}
 	
-	
-    @Override
-    public ReturnValue handleRequest(HashMap<?,?> paramsIn, Context context)
-    {
-    	// initialize our logger
-    	new Logger(context);
-    	
-    	// parse our parameters
-    	Object currentFirmwareUuid_raw = paramsIn.get("currentFirmwareUuid");
-    	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
+
+	@Override
+	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
+	{
+		// parse our parameters
+    	Object currentHardwareUuid_raw = paramsIn.get("hardwareUuid");
+    	if( (currentHardwareUuid_raw == null) || !(currentHardwareUuid_raw instanceof String) )
     	{
     		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
     	}
-    
-    	// get our firmware identifier
-    	FirmwareIdentifier fi = new FirmwareIdentifier((String)currentFirmwareUuid_raw);
+    	
+    	// get our hardware identifier
+    	HardwareIdentifier hi = new HardwareIdentifier((String)currentHardwareUuid_raw);
     	
     	// setup a connection to our database
     	DatabaseManager dbMan = null;
@@ -54,8 +47,8 @@ public class CheckForUpdateLambda implements RequestHandler<HashMap<?,?>, Object
     	try
     	{
     		// figure out our target version
-    		String targetVersion = dbMan.getLatestFirmwareUuid(fi);
-    		
+    		String targetVersion = dbMan.getLatestFirmwareUuid(hi);
+    	
 	    	// 	encode our return value
     		retVal = new ReturnValue(targetVersion);
     	}
@@ -69,5 +62,6 @@ public class CheckForUpdateLambda implements RequestHandler<HashMap<?,?>, Object
     	}
     	
     	return retVal;
-    }
+	}
+
 }

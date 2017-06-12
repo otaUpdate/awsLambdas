@@ -1,4 +1,4 @@
-package net.otaupdate.lambdas.checkForUpdate.model;
+package net.otaupdate.lambdas.model;
 
 
 public class HardwareIdentifier
