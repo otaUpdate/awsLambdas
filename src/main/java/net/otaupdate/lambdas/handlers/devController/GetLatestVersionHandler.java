@@ -1,11 +1,12 @@
-package net.otaupdate.lambdas.handlers;
+package net.otaupdate.lambdas.handlers.devController;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 
+import net.otaupdate.lambdas.handlers.AbstractMultiplexedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.model.HardwareIdentifier;
 import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.HardwareIdentifier;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 

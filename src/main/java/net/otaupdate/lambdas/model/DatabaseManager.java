@@ -4,17 +4,29 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
+import org.apache.commons.dbutils.DbUtils;
+
+import net.otaupdate.lambdas.util.FirmwareIdentifier;
+import net.otaupdate.lambdas.util.HardwareIdentifier;
 import net.otaupdate.lambdas.util.Logger;
 
 
 public class DatabaseManager
 {
-	public static final String DB_HOST = System.getenv("db_endpoint");
-	public static final String DB_USERNAME = System.getenv("db_username");
-	public static final String DB_PASSWORD = System.getenv("db_password");
-	public static final String DB_NAME = "otaUpdates";
+	private static final String DB_HOST = System.getenv("db_endpoint");
+	private static final String DB_USERNAME = System.getenv("db_username");
+	private static final String DB_PASSWORD = System.getenv("db_password");
+	private static final String DB_NAME = "otaUpdates";
+	
+	private static final int LOGIN_TOKEN_PERIOD_MINS = 60;
 	
 	
 	private final Connection connection;
@@ -31,7 +43,7 @@ public class DatabaseManager
 	
 	public void close()
 	{
-		try { this.connection.close(); } catch( Exception e ) { }
+		DbUtils.closeQuietly(this.connection);
 	}
 	
 	
@@ -61,6 +73,7 @@ public class DatabaseManager
 	}
 	
 	
+	// TODO need to change table, etc
 	public String getLatestFirmwareUuid(HardwareIdentifier hiIn)
 	{
 		String retVal = null;
@@ -87,9 +100,10 @@ public class DatabaseManager
 	}
 	
 	
-	public DownloadableFirmwareImage getDownloadableFirmwareImageForFirmwareId(FirmwareIdentifier fiIn)
+	// TODO need to change table, etc
+	public FirmwareImage getDownloadableFirmwareImageForFirmwareId(FirmwareIdentifier fiIn)
 	{
-		DownloadableFirmwareImage retVal = null;
+		FirmwareImage retVal = null;
 		
 		try
 		{
@@ -101,7 +115,7 @@ public class DatabaseManager
 				String name = rs.getString("name");
 				if( name == null ) continue;
 				
-				String uuid = rs.getString("versionUuid");
+				String uuid = rs.getString("uuid");
 				if( uuid == null ) continue;
 				
 				String s3bucket = rs.getString("s3bucket");
@@ -110,7 +124,7 @@ public class DatabaseManager
 				String s3key = rs.getString("s3key");
 				if( s3key == null ) continue;
 				
-				retVal = new DownloadableFirmwareImage(name, uuid, s3bucket, s3key);
+				retVal = new FirmwareImage(name, uuid, s3bucket, s3key);
 				break;
 			}
 		}
@@ -120,6 +134,305 @@ public class DatabaseManager
 		}
 		
 		if( retVal == null ) Logger.getSingleton().warn(String.format("no firmware image for '%s'", fiIn.toString()));
+		
+		return retVal;
+	}
+	
+	
+	public List<Map<String, Object>> listTableContents(String tableNameIn, String joinClauseIn, String whereClauseIn, String resultColumnsIn)
+	{
+		List<Map<String, Object>> retVal = new ArrayList<Map<String, Object>>();
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			if( resultColumnsIn == null ) resultColumnsIn = "*";
+			String sqlQueryString = String.format("SELECT %s from `%s`", resultColumnsIn, tableNameIn);
+			if( joinClauseIn != null ) sqlQueryString += joinClauseIn;
+			if( whereClauseIn != null ) sqlQueryString += whereClauseIn;
+			Logger.getSingleton().debug(String.format("sqlQuery: '%s", sqlQueryString));
+			
+			statement = this.connection.prepareStatement(sqlQueryString);
+			rs = statement.executeQuery();
+			ResultSetMetaData rsmd = rs.getMetaData();
+			while( rs.next() )
+			{
+				Map<String, Object> currEntry = new HashMap<String, Object>();
+				for( int i = 1; i <= rsmd.getColumnCount(); i++ )
+				{
+					currEntry.put(rsmd.getColumnName(i), rs.getObject(i));
+				}
+				retVal.add(currEntry);
+			}
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean addUser(String emailAddressIn, String passwordIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			String salt = UUID.randomUUID().toString();
+			
+			statement = this.connection.prepareStatement("INSERT INTO `users`(email, passwordHash, salt) VALUES (?, ENCRYPT(?, ?), ?)");
+			statement.setString(1, emailAddressIn);
+			statement.setString(2, passwordIn);
+			statement.setString(3, salt);
+			statement.setString(4, salt);
+			retVal = statement.executeUpdate() == 1;
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean doesUserExist(String emailAddressIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			statement = this.connection.prepareStatement("SELECT * FROM `users` WHERE email=?");
+			statement.setString(1, emailAddressIn);
+			rs = statement.executeQuery();
+			retVal = rs.first();
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public String authorizeUser(String emailAddressIn, String passwordIn)
+	{
+		String retVal = null;
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			// first we have to get the user row for the salt
+			statement = this.connection.prepareStatement("SELECT * FROM `users` WHERE email=?");
+			statement.setString(1, emailAddressIn);
+			rs = statement.executeQuery();
+			if( !rs.next() ) return null;
+			
+			String salt = rs.getString("salt");
+			if( salt == null ) return null;
+			
+			// release our previous statement and result set
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+			
+			// now we need to see if the hashed password is correct
+			statement = this.connection.prepareStatement("SELECT * FROM `users` WHERE email=? AND passwordHash=ENCRYPT(?, ?)");
+			statement.setString(1, emailAddressIn);
+			statement.setString(2, passwordIn);
+			statement.setString(3,  salt);
+			boolean loginSuccessful = statement.executeQuery().first();
+			
+			// release our previous statement and result set
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+			
+			// update the database accordingly
+			if( loginSuccessful)
+			{
+				// login successful...now we need to generate a login token
+				String loginToken = UUID.randomUUID().toString();
+				statement = this.connection.prepareStatement("UPDATE `users` SET loginToken=?, loginTokenCreation=NOW() WHERE email=?");
+				statement.setString(1, loginToken);
+				statement.setString(2, emailAddressIn);
+				if( statement.executeUpdate() > 0 ) retVal = loginToken;
+			}
+			else
+			{
+				// login failed...invalidate any previous tokens
+				statement = this.connection.prepareStatement("UPDATE `users` SET loginToken=NULL WHERE email=?");
+				statement.setString(1, emailAddressIn);
+				statement.executeUpdate();
+			}
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public Integer getUserIdForLoginToken(String authTokenIn)
+	{
+		Integer retVal = null;
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			statement = this.connection.prepareStatement("SELECT * FROM `users` WHERE loginToken=? and loginTokenCreation > NOW() - INTERVAL ? MINUTE");
+			statement.setString(1, authTokenIn);
+			statement.setInt(2, LOGIN_TOKEN_PERIOD_MINS);
+			rs = statement.executeQuery();
+			if( rs.first() )
+			{
+				retVal = new Integer(rs.getInt("id"));
+			}
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean addUserToOrganization(String emailAddressIn, String organizationUuidIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			statement = this.connection.prepareStatement("INSERT INTO `organizationUserMap` (userId, organizationUuid) VALUES((SELECT id FROM `users` WHERE email=?), ?)");
+			statement.setString(1, emailAddressIn);
+			statement.setString(2, organizationUuidIn);
+			retVal = statement.executeUpdate() == 1;
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean isUserPartOfOrganization(Integer userIdIn, String organizationUuidIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			statement = this.connection.prepareStatement("SELECT * FROM `organizationUserMap` WHERE userId=? AND organizationUuid=?");
+			statement.setInt(1, userIdIn);
+			statement.setString(2, organizationUuidIn);
+			retVal = statement.executeQuery().first();
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public List<Map<String, String>> listUsersInOrganization(String organizationUuidIn)
+	{
+		List<Map<String, String>> retVal = new ArrayList<Map<String, String>>();
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			statement = this.connection.prepareStatement("SELECT users.email FROM `users` JOIN `organizationUserMap` ON users.id=organizationUserMap.userId AND organizationUserMap.organizationUuid=?");
+			statement.setString(1, organizationUuidIn);
+			rs = statement.executeQuery();
+			while( rs.next() )
+			{
+				Map<String, String> newItem = new HashMap<String, String>();
+				newItem.put("email", rs.getString("email"));
+				retVal.add(newItem);
+			}
+		}
+		catch( Exception e )
+		{
+			retVal = null;
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean removeUserFromOrganization(String emailAddressIn, String organizationUuidIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			statement = this.connection.prepareStatement("DELETE `organizationUserMap` FROM `organizationUserMap` JOIN `users` ON organizationUserMap.userId=users.id WHERE users.email=?");
+			statement.setString(1, emailAddressIn);
+			retVal = statement.executeUpdate() == 1;
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
 		
 		return retVal;
 	}

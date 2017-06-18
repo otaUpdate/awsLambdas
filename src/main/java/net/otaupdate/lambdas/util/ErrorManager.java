@@ -6,6 +6,8 @@ public class ErrorManager
 	public enum ErrorType
 	{
 		BadRequest("BadRequest"),
+		Unauthorized("Unauthorized"),
+		Conflict("Conflict"),
 		ServerError("ServerError");
 		
 		private final String stringRep;

@@ -1,26 +1,41 @@
-package net.otaupdate.lambdas.handlers;
+package net.otaupdate.lambdas.handlers.devController;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 
+import net.otaupdate.lambdas.handlers.AbstractMultiplexedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.model.FirmwareIdentifier;
+import net.otaupdate.lambdas.model.FirmwareImage;
 import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.FirmwareIdentifier;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class CheckForUpdateHandler extends AbstractMultiplexedRequestHandler
+public class GetFirmwareDownloadLinkHandler extends AbstractMultiplexedRequestHandler
 {
+	@SuppressWarnings("unused")
 	private class ReturnValue
 	{
-		@SuppressWarnings("unused")
-		public final boolean updateAvailable;
+		public final boolean downloadAvailable;
+		public final String name;
 		public final String targetVersionUuid;
+		public final String url;
 		
-		ReturnValue(String targetVersionUuidIn)
+		ReturnValue()
 		{
+			this.downloadAvailable = false;
+			this.name = null;
+			this.targetVersionUuid = null;
+			this.url = null;
+		}
+		
+		
+		ReturnValue(String nameIn, String targetVersionUuidIn, String urlIn)
+		{
+			this.downloadAvailable = true;
+			this.name = nameIn;
 			this.targetVersionUuid = targetVersionUuidIn;
-			this.updateAvailable = (this.targetVersionUuid != null);
+			this.url = urlIn;
 		}
 	}
 	
@@ -29,7 +44,7 @@ public class CheckForUpdateHandler extends AbstractMultiplexedRequestHandler
 	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
 	{
 		// parse our parameters
-    	Object currentFirmwareUuid_raw = paramsIn.get("currentFirmwareUuid");
+    	Object currentFirmwareUuid_raw = paramsIn.get("targetFirmwareUuid");
     	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
     	{
     		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
@@ -46,11 +61,17 @@ public class CheckForUpdateHandler extends AbstractMultiplexedRequestHandler
     	ReturnValue retVal = null;
     	try
     	{
-    		// figure out our target version
-    		String targetVersion = dbMan.getLatestFirmwareUuid(fi);
-    		
-	    	// 	encode our return value
-    		retVal = new ReturnValue(targetVersion);
+    		FirmwareImage dfi = dbMan.getDownloadableFirmwareImageForFirmwareId(fi);
+    		if( (dfi == null) || !dfi.hasStoredFirmwareFile() )
+    		{
+    			// no firmware image available
+    			retVal = new ReturnValue();
+    		}
+    		else
+    		{
+    			// firmware version available...get our URL
+    			retVal = new ReturnValue(dfi.getName(), dfi.getUuid(), dfi.getLimitedAccessUrl());
+    		}
     	}
     	catch( Exception e )
     	{

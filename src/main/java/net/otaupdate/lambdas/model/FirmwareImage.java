@@ -7,7 +7,7 @@ import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 
-public class DownloadableFirmwareImage
+public class FirmwareImage
 {
 	private static final int LINK_EXPIRATION_S = 60;
 	
@@ -18,7 +18,7 @@ public class DownloadableFirmwareImage
 	private final String s3key;
 	
 	
-	public DownloadableFirmwareImage(String nameIn, String uuidIn, String s3bucketIn, String s3keyIn)
+	public FirmwareImage(String nameIn, String uuidIn, String s3bucketIn, String s3keyIn)
 	{
 		this.name = nameIn;
 		this.uuid = uuidIn;
