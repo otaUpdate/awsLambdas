@@ -25,7 +25,7 @@ public class SelectHandler extends AbstractMultiplexedRequestHandler
     		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
     	}
     	
-    	String joinClause = this.parseJoinClause(paramsIn, tableName);
+    	String joinClause = this.parseJoinClause(paramsIn);
     	String whereClause = this.parseWhereClause(paramsIn);
     	String resultColumns = this.parseResultColumns(paramsIn);
     	String authToken = this.parseAuthToken(paramsIn);
@@ -72,7 +72,7 @@ public class SelectHandler extends AbstractMultiplexedRequestHandler
 	}
 	
 	
-	private String parseJoinClause(HashMap<String, Object> paramsIn, String previousTableNameIn)
+	private String parseJoinClause(HashMap<String, Object> paramsIn)
 	{
 		List<?> joinArray = ObjectHelper.parseObjectFromMap(paramsIn, "join", List.class);
 		if( joinArray == null ) return null;
@@ -83,6 +83,9 @@ public class SelectHandler extends AbstractMultiplexedRequestHandler
 			Map<?, ?> currEntry = ObjectHelper.parseObjectFromArray(joinArray, i, Map.class);
 			if( currEntry == null ) return null;
 			
+			String joinType = ObjectHelper.parseObjectFromMap(currEntry, "joinType", String.class);
+			if( (joinType == null) || joinType.isEmpty() ) joinType = "JOIN";
+			
 			String tableName = ObjectHelper.parseObjectFromMap(currEntry, "tableName", String.class);
 			if( tableName == null ) return null;
 			
@@ -92,8 +95,7 @@ public class SelectHandler extends AbstractMultiplexedRequestHandler
 			String rightTableColumn = ObjectHelper.parseObjectFromMap(currEntry, "rightTableColumn", String.class);
 			if( rightTableColumn == null ) return null;
 			
-			retVal += String.format(" JOIN `%s` ON %s.%s=%s.%s", tableName, previousTableNameIn, leftTableColumn, tableName, rightTableColumn);
-			previousTableNameIn = tableName;
+			retVal += String.format(" %s `%s` ON %s=%s", joinType, tableName, leftTableColumn, rightTableColumn);
 		}
 		
 		return retVal;
