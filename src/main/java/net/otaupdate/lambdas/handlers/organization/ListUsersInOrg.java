@@ -1,48 +1,40 @@
 package net.otaupdate.lambdas.handlers.organization;
 
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.otaupdate.lambdas.handlers.AbstractMultiplexedRequestHandler;
+import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.util.ErrorManager;
 import net.otaupdate.lambdas.util.ObjectHelper;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class ListUsersInOrg extends AbstractMultiplexedRequestHandler
+public class ListUsersInOrg extends AbstractAuthorizedRequestHandler
 {
+	private String organizationUuid = null;
+	
+	
 	@Override
-	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
+	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
 		// parse our parameters
-    	String organizationUuid = ObjectHelper.parseObjectFromMap(paramsIn, "organizationUuid", String.class);
-    	if( organizationUuid == null )
-    	{
-    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
-    	}
+    	this.organizationUuid = ObjectHelper.parseObjectFromMap(paramsIn, "organizationUuid", String.class);
+    	if( this.organizationUuid == null ) return false;
     	
-    	String authToken = this.parseAuthToken(paramsIn);
-    	
-    	// setup a connection to our database
-    	DatabaseManager dbMan = null;
-    	try{ dbMan = new DatabaseManager(); } 
-    	catch( SQLException e ) { ErrorManager.throwError(ErrorType.ServerError, "problem connecting to database"); }
-    	
-    	// get the userId (and make sure the authToken is still valid)
-    	Integer userId = null;
-    	if( (authToken == null) || (userId = dbMan.getUserIdForLoginToken(authToken)) == null )
-    	{
-    		ErrorManager.throwError(ErrorType.Unauthorized, "invalid authorization token for resource");
-    	}
-    	
+    	return true;
+	}
+	
+	
+	@Override
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
+	{
     	// make user the user is actually a member of this organization
-    	if( !dbMan.isUserPartOfOrganization(userId, organizationUuid) ) ErrorManager.throwError(ErrorType.Unauthorized, "not authorized to access this resource");
+    	if( !dbManIn.isUserPartOfOrganization(userIdIn, this.organizationUuid) ) ErrorManager.throwError(ErrorType.Unauthorized, "not authorized to access this resource");
     	
     	// do our update
-    	List<Map<String, String>> retVal = dbMan.listUsersInOrganization(organizationUuid);
+    	List<Map<String, String>> retVal = dbManIn.listUsersInOrganization(this.organizationUuid);
     	
 		if( retVal == null ) ErrorManager.throwError(ErrorType.BadRequest, "problem listing users");
 		

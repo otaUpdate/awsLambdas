@@ -1,74 +1,54 @@
-package net.otaupdate.lambdas.handlers;
+package net.otaupdate.lambdas.handlers.general;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 import net.otaupdate.lambdas.util.Logger;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 
-public class SelectHandler extends AbstractMultiplexedRequestHandler
+public class SelectHandler extends AbstractAuthorizedRequestHandler
 {
+	private String tableName = null;
+	private String joinClause = null;
+	private String whereClause = null;
+	private String resultColumns = null;
+	private String userIdColumn = null;
+	
+	
 	@Override
-	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
+	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
 		// parse our parameters
-		String tableName = ObjectHelper.parseObjectFromMap(paramsIn, "tableName", String.class);
-    	if( tableName == null )
-    	{
-    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
-    	}
+		this.tableName = ObjectHelper.parseObjectFromMap(paramsIn, "tableName", String.class);
+    	if( this.tableName == null ) return false;
     	
-    	String joinClause = this.parseJoinClause(paramsIn);
-    	String whereClause = this.parseWhereClause(paramsIn);
-    	String resultColumns = this.parseResultColumns(paramsIn);
-    	String authToken = this.parseAuthToken(paramsIn);
-    	String userIdColumn = this.parseUserIdColumn(paramsIn);
+    	this.joinClause = this.parseJoinClause(paramsIn);
+    	this.whereClause = this.parseWhereClause(paramsIn);
+    	this.resultColumns = this.parseResultColumns(paramsIn);
+    	this.userIdColumn = this.parseUserIdColumn(paramsIn);
 		
     	// log some important info
-    	Logger.getSingleton().debug(String.format("authToken: '%s", authToken));
-    	Logger.getSingleton().debug(String.format("tableName: '%s", tableName));
-    	Logger.getSingleton().debug(String.format("joinClause: '%s", joinClause));
-    	Logger.getSingleton().debug(String.format("resultColumns: '%s", resultColumns));
+    	Logger.getSingleton().debug(String.format("tableName: '%s", this.tableName));
+    	Logger.getSingleton().debug(String.format("joinClause: '%s", this.joinClause));
+    	Logger.getSingleton().debug(String.format("resultColumns: '%s", this.resultColumns));
     	
-		// setup a connection to our database
-    	DatabaseManager dbMan = null;
-    	try{ dbMan = new DatabaseManager(); } 
-    	catch( SQLException e ) { ErrorManager.throwError(ErrorType.ServerError, "problem connecting to database"); }
-    	
-    	// get the userId (and make sure the authToken is still valid)
-    	Integer userId = null;
-    	if( (authToken == null) || ((userId = dbMan.getUserIdForLoginToken(authToken)) == null) )
-    	{
-    		ErrorManager.throwError(ErrorType.Unauthorized, "invalid authorization token for resource");
-    	}
-    	
+    	return true;
+	}
+	
+	
+	@Override
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
+	{
     	// append our userId column filter if needed
-    	if( userIdColumn != null ) whereClause = this.appendUserIdToWhereClause(userIdColumn, userId.intValue(), whereClause);
-    	Logger.getSingleton().debug(String.format("whereClause: '%s", whereClause));
+    	if( userIdColumn != null ) this.whereClause = this.appendUserIdToWhereClause(userIdColumn, userIdIn, this.whereClause);
+    	Logger.getSingleton().debug(String.format("whereClause: '%s", this.whereClause));
     	
-    	// always make sure we return an array (even if it's empty)
-    	List<Map<String, Object>> retVal = new ArrayList<Map<String,Object>>();
-    	try
-    	{
-    		retVal = dbMan.listTableContents(tableName, joinClause, whereClause, resultColumns);
-    	}
-    	catch( Exception e )
-    	{
-    		ErrorManager.throwError(ErrorType.ServerError, "unhandled exception");
-    	}
-    	finally
-    	{
-    		dbMan.close();
-    	}
- 
-    	return retVal;
+    	// do our select
+    	return dbManIn.listTableContents(this.tableName, this.joinClause, this.whereClause, this.resultColumns);
 	}
 	
 	

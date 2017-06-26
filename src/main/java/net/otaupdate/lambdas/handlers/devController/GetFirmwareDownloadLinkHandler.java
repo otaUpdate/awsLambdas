@@ -1,9 +1,9 @@
 package net.otaupdate.lambdas.handlers.devController;
 
-import java.sql.SQLException;
 import java.util.HashMap;
 
-import net.otaupdate.lambdas.handlers.AbstractMultiplexedRequestHandler;
+import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.AbstractRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.FirmwareImage;
 import net.otaupdate.lambdas.util.ErrorManager;
@@ -11,7 +11,7 @@ import net.otaupdate.lambdas.util.FirmwareIdentifier;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class GetFirmwareDownloadLinkHandler extends AbstractMultiplexedRequestHandler
+public class GetFirmwareDownloadLinkHandler extends AbstractAuthorizedRequestHandler
 {
 	@SuppressWarnings("unused")
 	private class ReturnValue
@@ -39,50 +39,38 @@ public class GetFirmwareDownloadLinkHandler extends AbstractMultiplexedRequestHa
 		}
 	}
 	
+	
+	@Override
+	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
+	{
+		return true;
+	}
+	
 
 	@Override
-	public Object handleRequestWithParameters(HashMap<String, Object> paramsIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
 	{
-		// parse our parameters
-    	Object currentFirmwareUuid_raw = paramsIn.get("targetFirmwareUuid");
-    	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
-    	{
-    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
-    	}
-    
-    	// get our firmware identifier
-    	FirmwareIdentifier fi = new FirmwareIdentifier((String)currentFirmwareUuid_raw);
-    	
-    	// setup a connection to our database
-    	DatabaseManager dbMan = null;
-    	try{ dbMan = new DatabaseManager(); } 
-    	catch( SQLException e ) { ErrorManager.throwError(ErrorType.ServerError, "problem connecting to database"); }
-    	
-    	ReturnValue retVal = null;
-    	try
-    	{
-    		FirmwareImage dfi = dbMan.getDownloadableFirmwareImageForFirmwareId(fi);
-    		if( (dfi == null) || !dfi.hasStoredFirmwareFile() )
-    		{
-    			// no firmware image available
-    			retVal = new ReturnValue();
-    		}
-    		else
-    		{
-    			// firmware version available...get our URL
-    			retVal = new ReturnValue(dfi.getName(), dfi.getUuid(), dfi.getLimitedAccessUrl());
-    		}
-    	}
-    	catch( Exception e )
-    	{
-    		ErrorManager.throwError(ErrorType.ServerError, "unhandled exception");
-    	}
-    	finally
-    	{
-    		dbMan.close();
-    	}
-    	
-    	return retVal;
+//		// parse our parameters
+//    	Object currentFirmwareUuid_raw = paramsIn.get("targetFirmwareUuid");
+//    	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
+//    	{
+//    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
+//    	}
+//    
+//    	// get our firmware identifier
+//    	FirmwareIdentifier fi = new FirmwareIdentifier((String)currentFirmwareUuid_raw);
+//    	
+//    	
+//    	ReturnValue retVal = new ReturnValue();
+//    	FirmwareImage dfi = dbManIn.getDownloadableFirmwareImageForFirmwareId(fi);
+//		if( (dfi != null) && dfi.hasStoredFirmwareFile() )
+//		{
+//			// firmware version available...get our URL
+//			retVal = new ReturnValue(dfi.getName(), dfi.getUuid(), dfi.getLimitedAccessDownloadUrl());
+//		}
+//    	return retVal;
+		
+		return null;
 	}
 
 }

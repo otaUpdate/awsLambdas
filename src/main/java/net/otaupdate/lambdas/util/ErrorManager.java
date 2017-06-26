@@ -16,7 +16,7 @@ public class ErrorManager
 	}
 	
 	
-    public static void throwError(ErrorType errTypeIn, String messageIn)
+    public static void throwError(ErrorType errTypeIn, String messageIn) throws RuntimeException
     {
     	String errorMessage = String.format("[%s] %s", errTypeIn.toString(), messageIn);
     	Logger.getSingleton().error(errorMessage);

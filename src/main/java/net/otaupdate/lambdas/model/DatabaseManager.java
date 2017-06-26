@@ -47,6 +47,7 @@ public class DatabaseManager
 	}
 	
 	
+	// TODO need to change table, etc
 	public String getLatestFirmwareUuid(FirmwareIdentifier fiIn)
 	{
 		String retVal = null;
@@ -118,13 +119,7 @@ public class DatabaseManager
 				String uuid = rs.getString("uuid");
 				if( uuid == null ) continue;
 				
-				String s3bucket = rs.getString("s3bucket");
-				if( s3bucket == null ) continue;
-				
-				String s3key = rs.getString("s3key");
-				if( s3key == null ) continue;
-				
-				retVal = new FirmwareImage(name, uuid, s3bucket, s3key);
+				retVal = new FirmwareImage(name, uuid);
 				break;
 			}
 		}
@@ -173,6 +168,64 @@ public class DatabaseManager
 		finally
 		{
 			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean updateInTable(String tableNameIn, String joinClauseIn, String setClauseIn, String whereClauseIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			String sqlQueryString = String.format("UPDATE `%s`", tableNameIn);
+			if( joinClauseIn != null ) sqlQueryString += joinClauseIn;
+			if( setClauseIn != null ) sqlQueryString += setClauseIn;
+			if( whereClauseIn != null ) sqlQueryString += whereClauseIn;
+			Logger.getSingleton().debug(String.format("sqlQuery: '%s", sqlQueryString));
+			
+			statement = this.connection.prepareStatement(sqlQueryString);
+			retVal = (statement.executeUpdate() > 0);
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean deleteFromTable(String tableNameIn, String joinClauseIn, String whereClauseIn)
+	{
+
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			String sqlQueryString = String.format("DELETE %s from `%s`", tableNameIn, tableNameIn);
+			if( joinClauseIn != null ) sqlQueryString += joinClauseIn;
+			if( whereClauseIn != null ) sqlQueryString += whereClauseIn;
+			Logger.getSingleton().debug(String.format("sqlQuery: '%s", sqlQueryString));
+			
+			statement = this.connection.prepareStatement(sqlQueryString);
+			retVal = (statement.executeUpdate() > 0);
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
 			DbUtils.closeQuietly(statement);
 		}
 		
@@ -424,6 +477,87 @@ public class DatabaseManager
 			statement = this.connection.prepareStatement("DELETE `organizationUserMap` FROM `organizationUserMap` JOIN `users` ON organizationUserMap.userId=users.id WHERE users.email=?");
 			statement.setString(1, emailAddressIn);
 			retVal = statement.executeUpdate() == 1;
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public FirmwareImage insertFirmwareImage(String nameIn, String processorUuidIn, String deviceUuidIn, String organizationUuidIn)
+	{
+		FirmwareImage retVal = null;
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			// first we need to make sure the processor/device/organization tree is OK
+			statement = this.connection.prepareStatement("SELECT processors.uuid FROM `processors` "
+														+ "JOIN `devices` ON processors.deviceUuid=devices.uuid "
+														+ "WHERE processors.uuid=? AND devices.uuid=? AND devices.organizationUuid=?");
+			statement.setString(1, processorUuidIn);
+			statement.setString(2, deviceUuidIn);
+			statement.setString(3, organizationUuidIn);
+			if( !((rs = statement.executeQuery()).first()) ) return null;
+			
+			// release our previous statement and result set
+			DbUtils.close(rs);
+			DbUtils.closeQuietly(statement);
+			
+			// processors/device/organization tree is OK...insert the firmware image
+			String uuid = UUID.randomUUID().toString();
+			statement = this.connection.prepareStatement("INSERT INTO `firmwareImages` (uuid, name, processorUuid) VALUES (?, ?, ?)");
+			statement.setString(1, uuid);
+			statement.setString(2, nameIn);
+			statement.setString(3, processorUuidIn);
+			if( statement.executeUpdate() != 1 ) return null;
+			
+			// if we made it here, the new firmware image has been created successfully
+			retVal = new FirmwareImage(nameIn, uuid);
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean deleteFirmwareImage(String fwUuidIn, String processorUuidIn, String deviceUuidIn, String organizationUuidIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			// first we need to make sure the processor/device/organization tree is OK
+			statement = this.connection.prepareStatement("DELETE firmwareImages FROM `firmwareImages` "
+													   + "JOIN `processors` ON firmwareImages.processorUuid=processors.uuid "
+													   + "JOIN `devices` ON processors.deviceUuid=devices.uuid "
+													   + "JOIN `organizationUserMap` ON devices.organizationUuid=organizationUserMap.organizationUuid "
+													   + "WHERE firmwareImages.uuid=? "
+													   + "AND processors.uuid=? "
+													   + "AND devices.uuid=? "
+													   + "AND devices.organizationUuid=?");
+			statement.setString(1, fwUuidIn);
+			statement.setString(2, processorUuidIn);
+			statement.setString(3, deviceUuidIn);
+			statement.setString(4, organizationUuidIn);
+			retVal = (statement.executeUpdate() == 1 );
 		}
 		catch( Exception e )
 		{
