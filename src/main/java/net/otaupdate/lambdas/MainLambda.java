@@ -14,13 +14,14 @@ import net.otaupdate.lambdas.handlers.devController.GetFirmwareDownloadLinkHandl
 import net.otaupdate.lambdas.handlers.devController.GetLatestVersionHandler;
 import net.otaupdate.lambdas.handlers.fw.DeleteFirmwareHandler;
 import net.otaupdate.lambdas.handlers.fw.PostFirmwareHandler;
-import net.otaupdate.lambdas.handlers.general.CreateHandler;
+import net.otaupdate.lambdas.handlers.general.InsertSelectHandler;
 import net.otaupdate.lambdas.handlers.general.DeleteHandler;
 import net.otaupdate.lambdas.handlers.general.SelectHandler;
 import net.otaupdate.lambdas.handlers.general.UpdateHandler;
 import net.otaupdate.lambdas.handlers.login.CreateUserHandler;
 import net.otaupdate.lambdas.handlers.login.LoginHandler;
 import net.otaupdate.lambdas.handlers.organization.AddUserToOrgHandler;
+import net.otaupdate.lambdas.handlers.organization.CreateOrganizationHandler;
 import net.otaupdate.lambdas.handlers.organization.ListUsersInOrg;
 import net.otaupdate.lambdas.handlers.organization.RemoveUserFromOrgHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
@@ -40,13 +41,14 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 		HANDLER_MAP.put("getLatestVersion", GetLatestVersionHandler.class);
 
 		HANDLER_MAP.put("select", SelectHandler.class);
-		HANDLER_MAP.put("create", CreateHandler.class);
+		HANDLER_MAP.put("insertSelect", InsertSelectHandler.class);
 		HANDLER_MAP.put("update", UpdateHandler.class);
 		HANDLER_MAP.put("delete", DeleteHandler.class);
 		
 		HANDLER_MAP.put("createUser", CreateUserHandler.class);
 		HANDLER_MAP.put("login", LoginHandler.class);
 		
+		HANDLER_MAP.put("createOrg", CreateOrganizationHandler.class);
 		HANDLER_MAP.put("addUserToOrg", AddUserToOrgHandler.class);
 		HANDLER_MAP.put("removeUserFromOrg", RemoveUserFromOrgHandler.class);
 		HANDLER_MAP.put("listUsersInOrg", ListUsersInOrg.class);

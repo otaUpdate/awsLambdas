@@ -12,11 +12,13 @@ import net.otaupdate.lambdas.util.Logger;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 
-public class CreateHandler extends AbstractAuthorizedRequestHandler
+public class InsertSelectHandler extends AbstractAuthorizedRequestHandler
 {
-	private String tableName = null;
+	private String insertTableName = null;
+	private String columnNames = null;
+	private String columnValues = null;
+	private String selectTableName = null;
 	private String joinClause = null;
-	private String setClause = null;
 	private String whereClause = null;
 	private String userIdColumn = null;
 	
@@ -25,11 +27,16 @@ public class CreateHandler extends AbstractAuthorizedRequestHandler
 	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
 		// parse our parameters
-		this.tableName = ObjectHelper.parseObjectFromMap(paramsIn, "tableName", String.class);
-    	if( this.tableName == null ) return false;
+		this.insertTableName = ObjectHelper.parseObjectFromMap(paramsIn, "insertTableName", String.class);
+    	if( this.insertTableName == null ) return false;
+    	
+    	this.columnNames = this.parseColumnNames(paramsIn);
+    	this.columnValues = this.parseColumnValues(paramsIn);
+    	
+		this.selectTableName = ObjectHelper.parseObjectFromMap(paramsIn, "selectTableName", String.class);
+    	if( this.selectTableName == null ) return false;
     	
     	this.joinClause = this.parseJoinClause(paramsIn);
-    	this.setClause = this.parseSetClause(paramsIn);
     	this.whereClause = this.parseWhereClause(paramsIn);
     	this.userIdColumn = this.parseUserIdColumn(paramsIn);
     	
@@ -41,18 +48,59 @@ public class CreateHandler extends AbstractAuthorizedRequestHandler
 	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
 	{
     	// log some important info
-    	Logger.getSingleton().debug(String.format("tableName: '%s", this.tableName));
-    	Logger.getSingleton().debug(String.format("joinClause: '%s", this.joinClause));
-    	Logger.getSingleton().debug(String.format("setClause: '%s", this.joinClause));
+    	Logger.getSingleton().debug(String.format("insertTableName: '%s'", this.insertTableName));
+    	Logger.getSingleton().debug(String.format("columnNames: '%s'", this.columnNames));
+    	Logger.getSingleton().debug(String.format("columnValues: '%s'", this.columnValues));
+    	Logger.getSingleton().debug(String.format("selectTableName: '%s'", this.selectTableName));
+    	Logger.getSingleton().debug(String.format("joinClause: '%s'", this.joinClause));
     	
     	// append our userId column filter if needed
     	if( userIdColumn != null ) this.whereClause = this.appendUserIdToWhereClause(userIdColumn, userIdIn, this.whereClause);
-    	Logger.getSingleton().debug(String.format("whereClause: '%s", this.whereClause));
+    	Logger.getSingleton().debug(String.format("whereClause: '%s'", this.whereClause));
     	
     	// do our update
-		if( !dbManIn.updateInTable(this.tableName, this.joinClause, this.setClause, this.whereClause) ) ErrorManager.throwError(ErrorType.BadRequest, "error performing update");
+		if( !dbManIn.insertSelect(this.insertTableName, this.columnNames, this.columnValues, this.selectTableName, this.joinClause, this.whereClause) )
+		{
+			ErrorManager.throwError(ErrorType.BadRequest, "error performing insert select");
+		}
 		
 		return null;
+	}
+	
+	
+	private String parseColumnNames(HashMap<String, Object> paramsIn)
+	{
+		List<?> colNameArray = ObjectHelper.parseObjectFromMap(paramsIn, "columnNames", List.class);
+		if( colNameArray == null ) return null;
+		
+		String retVal = "";
+		for( int i = 0; i < colNameArray.size(); i++ )
+		{
+			if( retVal.isEmpty() ) retVal += "( ";
+			
+			if( i == 0 ) retVal += colNameArray.get(i);
+			else retVal += String.format(", %s", colNameArray.get(i));
+			
+			if( i == (colNameArray.size() - 1) ) retVal += " )";
+		}
+		
+		return retVal;
+	}
+	
+	
+	private String parseColumnValues(HashMap<String, Object> paramsIn)
+	{
+		List<?> colNameArray = ObjectHelper.parseObjectFromMap(paramsIn, "columnValues", List.class);
+		if( colNameArray == null ) return null;
+		
+		String retVal = "";
+		for( int i = 0; i < colNameArray.size(); i++ )
+		{			
+			if( i == 0 ) retVal += colNameArray.get(i);
+			else retVal += String.format(", %s", colNameArray.get(i));
+		}
+		
+		return retVal;
 	}
 	
 	
@@ -80,25 +128,6 @@ public class CreateHandler extends AbstractAuthorizedRequestHandler
 			if( rightTableColumn == null ) return null;
 			
 			retVal += String.format(" %s `%s` ON %s=%s", joinType, tableName, leftTableColumn, rightTableColumn);
-		}
-		
-		return retVal;
-	}
-	
-	
-	private String parseSetClause(HashMap<String, Object> paramsIn)
-	{
-		List<?> setArray = ObjectHelper.parseObjectFromMap(paramsIn, "set", List.class);
-		if( setArray == null ) return null;
-		
-		String retVal = "";
-		for( int i = 0; i < setArray.size(); i++ )
-		{
-			String currEntry = ObjectHelper.parseObjectFromArray(setArray, i, String.class);
-			if( currEntry == null ) return null;
-			
-			if( i == 0 ) retVal += " SET " + currEntry;
-			else retVal += ", " + currEntry;
 		}
 		
 		return retVal;

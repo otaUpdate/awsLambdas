@@ -30,11 +30,6 @@ public class SelectHandler extends AbstractAuthorizedRequestHandler
     	this.whereClause = this.parseWhereClause(paramsIn);
     	this.resultColumns = this.parseResultColumns(paramsIn);
     	this.userIdColumn = this.parseUserIdColumn(paramsIn);
-		
-    	// log some important info
-    	Logger.getSingleton().debug(String.format("tableName: '%s", this.tableName));
-    	Logger.getSingleton().debug(String.format("joinClause: '%s", this.joinClause));
-    	Logger.getSingleton().debug(String.format("resultColumns: '%s", this.resultColumns));
     	
     	return true;
 	}
@@ -43,9 +38,14 @@ public class SelectHandler extends AbstractAuthorizedRequestHandler
 	@Override
 	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
 	{
+    	// log some important info
+    	Logger.getSingleton().debug(String.format("tableName: '%s'", this.tableName));
+    	Logger.getSingleton().debug(String.format("joinClause: '%s'", this.joinClause));
+    	Logger.getSingleton().debug(String.format("resultColumns: '%s'", this.resultColumns));
+		
     	// append our userId column filter if needed
     	if( userIdColumn != null ) this.whereClause = this.appendUserIdToWhereClause(userIdColumn, userIdIn, this.whereClause);
-    	Logger.getSingleton().debug(String.format("whereClause: '%s", this.whereClause));
+    	Logger.getSingleton().debug(String.format("whereClause: '%s'", this.whereClause));
     	
     	// do our select
     	return dbManIn.listTableContents(this.tableName, this.joinClause, this.whereClause, this.resultColumns);

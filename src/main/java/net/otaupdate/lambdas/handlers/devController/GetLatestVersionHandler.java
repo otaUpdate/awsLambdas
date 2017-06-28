@@ -2,15 +2,12 @@ package net.otaupdate.lambdas.handlers.devController;
 
 import java.util.HashMap;
 
-import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
-import net.otaupdate.lambdas.handlers.AbstractRequestHandler;
+import net.otaupdate.lambdas.handlers.AbstractUnauthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.HardwareIdentifier;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.ObjectHelper;
 
 
-public class GetLatestVersionHandler extends AbstractAuthorizedRequestHandler
+public class GetLatestVersionHandler extends AbstractUnauthorizedRequestHandler
 {
 	private class ReturnValue
 	{
@@ -26,34 +23,23 @@ public class GetLatestVersionHandler extends AbstractAuthorizedRequestHandler
 	}
 	
 	
+	private String currProcUuid = null;
+	
+	
 	@Override
 	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
+		this.currProcUuid = ObjectHelper.parseObjectFromMap(paramsIn, "currProcUuid", String.class);
+		if( this.currProcUuid == null ) return false;
+		
 		return true;
 	}
 	
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn)
 	{
-//		// parse our parameters
-//    	Object currentHardwareUuid_raw = paramsIn.get("hardwareUuid");
-//    	if( (currentHardwareUuid_raw == null) || !(currentHardwareUuid_raw instanceof String) )
-//    	{
-//    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
-//    	}
-//    	
-//    	// get our hardware identifier
-//    	HardwareIdentifier hi = new HardwareIdentifier((String)currentHardwareUuid_raw);
-//    	
-//    	
-//    	// figure out our target version
-//		String targetVersion = dbManIn.getLatestFirmwareUuid(hi);
-//    	
-//    	// 	encode our return value
-//		return new ReturnValue(targetVersion);
-		
-		return null;
+		return new ReturnValue(dbManIn.getLatestFirmwareForProcessorUuid(this.currProcUuid));
 	}
 
 }

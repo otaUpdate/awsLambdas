@@ -4,7 +4,6 @@ import java.util.HashMap;
 
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.model.FirmwareImage;
 import net.otaupdate.lambdas.util.ErrorManager;
 import net.otaupdate.lambdas.util.Logger;
 import net.otaupdate.lambdas.util.ObjectHelper;
@@ -64,27 +63,27 @@ public class PostFirmwareHandler extends AbstractAuthorizedRequestHandler
     	if( !dbManIn.isUserPartOfOrganization(userIdIn, this.organizationUuid) ) ErrorManager.throwError(ErrorType.Unauthorized, "not authorized to access this resource");
     	
     	// if we made it here, user is part of this organization...proceed
-    	FirmwareImage fwImage = null;
-    	if( uuid != null )
+    	String fwUuid = null;
+    	if( this.uuid != null )
     	{
     		// we're updating an existing firmware image
     	}
     	else
     	{
     		// we're creating a new firmware image
-    		fwImage = dbManIn.insertFirmwareImage(this.name, this.processorUuid, this.deviceUuid, this.organizationUuid);
+    		fwUuid = dbManIn.insertFirmwareImageGetUuid(this.name, this.processorUuid, this.deviceUuid, this.organizationUuid);
     		
         	// do some logging
-    		if( fwImage != null ) Logger.getSingleton().debug(String.format("firmware image created: '%s'", fwImage.getUuid()));
+    		if( fwUuid != null ) Logger.getSingleton().debug(String.format("firmware image created: '%s'", fwUuid));
     		else Logger.getSingleton().warn(String.format("failed to create firmware image '%s' for processor '%s'", this.name, this.processorUuid));
     	}
-    	if( fwImage == null ) ErrorManager.throwError(ErrorType.ServerError, "error creating/updating firmware image");
+    	if( fwUuid == null ) ErrorManager.throwError(ErrorType.ServerError, "error creating/updating firmware image");
 		
     	// do some logging
-    	Logger.getSingleton().debug(String.format("created fw '%s' '%s', generating PUT URL", fwImage.getName(), fwImage.getUuid()));
+    	Logger.getSingleton().debug(String.format("created fw '%s' '%s', generating PUT URL", this.name, fwUuid));
     	
 		// if we made it here, we need to get the URL to which firmware can be uploaded
-		String uploadUrl = S3Helper.getLimitedAccessUploadUrlForFirmwareWithUuid(fwImage.getUuid());
+		String uploadUrl = S3Helper.getLimitedAccessUploadUrlForFirmwareWithUuid(fwUuid);
 		if( uploadUrl == null ) ErrorManager.throwError(ErrorType.ServerError, "error generating pre-signed URL for upload");
 		
 		return new ReturnValue(uploadUrl);

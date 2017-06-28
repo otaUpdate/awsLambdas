@@ -39,12 +39,12 @@ public class DeleteHandler extends AbstractAuthorizedRequestHandler
 	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
 	{
     	// log some important info
-    	Logger.getSingleton().debug(String.format("tableName: '%s", this.tableName));
-    	Logger.getSingleton().debug(String.format("joinClause: '%s", this.joinClause));
+    	Logger.getSingleton().debug(String.format("tableName: '%s'", this.tableName));
+    	Logger.getSingleton().debug(String.format("joinClause: '%s'", this.joinClause));
     	
     	// append our userId column filter if needed
     	if( userIdColumn != null ) this.whereClause = this.appendUserIdToWhereClause(userIdColumn, userIdIn, this.whereClause);
-    	Logger.getSingleton().debug(String.format("whereClause: '%s", this.whereClause));
+    	Logger.getSingleton().debug(String.format("whereClause: '%s'", this.whereClause));
     	
     	// do our delete...
 		if( !dbManIn.deleteFromTable(this.tableName, this.joinClause, this.whereClause) ) ErrorManager.throwError(ErrorType.BadRequest, "error performing delete");

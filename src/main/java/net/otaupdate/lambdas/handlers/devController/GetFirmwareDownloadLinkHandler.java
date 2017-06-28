@@ -2,75 +2,51 @@ package net.otaupdate.lambdas.handlers.devController;
 
 import java.util.HashMap;
 
-import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
-import net.otaupdate.lambdas.handlers.AbstractRequestHandler;
+import net.otaupdate.lambdas.handlers.AbstractUnauthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.model.FirmwareImage;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.FirmwareIdentifier;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.ObjectHelper;
+import net.otaupdate.lambdas.util.S3Helper;
 
 
-public class GetFirmwareDownloadLinkHandler extends AbstractAuthorizedRequestHandler
+public class GetFirmwareDownloadLinkHandler extends AbstractUnauthorizedRequestHandler
 {
 	@SuppressWarnings("unused")
 	private class ReturnValue
 	{
 		public final boolean downloadAvailable;
 		public final String name;
-		public final String targetVersionUuid;
 		public final String url;
 		
-		ReturnValue()
-		{
-			this.downloadAvailable = false;
-			this.name = null;
-			this.targetVersionUuid = null;
-			this.url = null;
-		}
 		
-		
-		ReturnValue(String nameIn, String targetVersionUuidIn, String urlIn)
+		ReturnValue(String nameIn, String urlIn)
 		{
-			this.downloadAvailable = true;
+			this.downloadAvailable = (nameIn != null) && (urlIn != null);
 			this.name = nameIn;
-			this.targetVersionUuid = targetVersionUuidIn;
 			this.url = urlIn;
 		}
 	}
 	
 	
+	private String targetFwUuid = null;
+	
+	
 	@Override
 	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
+		this.targetFwUuid = ObjectHelper.parseObjectFromMap(paramsIn, "targetFwUuid", String.class);
+		if( this.targetFwUuid == null ) return false;
+		
 		return true;
 	}
 	
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn)
 	{
-//		// parse our parameters
-//    	Object currentFirmwareUuid_raw = paramsIn.get("targetFirmwareUuid");
-//    	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
-//    	{
-//    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
-//    	}
-//    
-//    	// get our firmware identifier
-//    	FirmwareIdentifier fi = new FirmwareIdentifier((String)currentFirmwareUuid_raw);
-//    	
-//    	
-//    	ReturnValue retVal = new ReturnValue();
-//    	FirmwareImage dfi = dbManIn.getDownloadableFirmwareImageForFirmwareId(fi);
-//		if( (dfi != null) && dfi.hasStoredFirmwareFile() )
-//		{
-//			// firmware version available...get our URL
-//			retVal = new ReturnValue(dfi.getName(), dfi.getUuid(), dfi.getLimitedAccessDownloadUrl());
-//		}
-//    	return retVal;
-		
-		return null;
+		String name = dbManIn.getNameFirmwareUuidd(this.targetFwUuid);
+		String retUrl = S3Helper.getLimitedAccessDownloadUrlForFirmwareWithUuid(this.targetFwUuid);
+			
+    	return new ReturnValue(name, retUrl);
 	}
 
 }

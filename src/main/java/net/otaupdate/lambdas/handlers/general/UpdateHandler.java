@@ -41,13 +41,13 @@ public class UpdateHandler extends AbstractAuthorizedRequestHandler
 	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
 	{
     	// log some important info
-    	Logger.getSingleton().debug(String.format("tableName: '%s", this.tableName));
-    	Logger.getSingleton().debug(String.format("joinClause: '%s", this.joinClause));
-    	Logger.getSingleton().debug(String.format("setClause: '%s", this.joinClause));
+    	Logger.getSingleton().debug(String.format("tableName: '%s'", this.tableName));
+    	Logger.getSingleton().debug(String.format("joinClause: '%s'", this.joinClause));
+    	Logger.getSingleton().debug(String.format("setClause: '%s'", this.joinClause));
     	
     	// append our userId column filter if needed
     	if( userIdColumn != null ) this.whereClause = this.appendUserIdToWhereClause(userIdColumn, userIdIn, this.whereClause);
-    	Logger.getSingleton().debug(String.format("whereClause: '%s", this.whereClause));
+    	Logger.getSingleton().debug(String.format("whereClause: '%s'", this.whereClause));
     	
     	// do our update
 		if( !dbManIn.updateInTable(this.tableName, this.joinClause, this.setClause, this.whereClause) ) ErrorManager.throwError(ErrorType.BadRequest, "error performing update");

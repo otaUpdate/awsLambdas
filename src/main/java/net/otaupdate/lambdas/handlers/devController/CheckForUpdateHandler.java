@@ -2,15 +2,12 @@ package net.otaupdate.lambdas.handlers.devController;
 
 import java.util.HashMap;
 
-import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
-import net.otaupdate.lambdas.handlers.AbstractRequestHandler;
+import net.otaupdate.lambdas.handlers.AbstractUnauthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.FirmwareIdentifier;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.ObjectHelper;
 
 
-public class CheckForUpdateHandler extends AbstractAuthorizedRequestHandler
+public class CheckForUpdateHandler extends AbstractUnauthorizedRequestHandler
 {
 	private class ReturnValue
 	{
@@ -25,34 +22,24 @@ public class CheckForUpdateHandler extends AbstractAuthorizedRequestHandler
 		}
 	}
 	
+	
+	private String currentFwUuid = null;
+	
+	
 	@Override
 	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
+		this.currentFwUuid = ObjectHelper.parseObjectFromMap(paramsIn, "currentFwUuid", String.class);
+		if( this.currentFwUuid == null ) return false;
+		
 		return true;
 	}
 	
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, int userIdIn)
-	{
-//		// parse our parameters
-//    	Object currentFirmwareUuid_raw = paramsIn.get("currentFirmwareUuid");
-//    	if( (currentFirmwareUuid_raw == null) || !(currentFirmwareUuid_raw instanceof String) )
-//    	{
-//    		ErrorManager.throwError(ErrorType.BadRequest, "problem parsing input parameters");
-//    	}
-//    
-//    	// get our firmware identifier
-//    	FirmwareIdentifier fi = new FirmwareIdentifier((String)currentFirmwareUuid_raw);
-//    	
-//    	
-//		// figure out our target version
-//		String targetVersion = dbManIn.getLatestFirmwareUuid(fi);
-//		
-//    	// 	encode our return value
-//		return new ReturnValue(targetVersion);
-		
-		return null;
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn)
+	{	
+		return new ReturnValue(dbManIn.getNextFirmwareForFirmwareUuid(this.currentFwUuid));
 	}
 
 }

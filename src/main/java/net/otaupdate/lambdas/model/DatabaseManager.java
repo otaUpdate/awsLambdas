@@ -14,8 +14,6 @@ import java.util.UUID;
 
 import org.apache.commons.dbutils.DbUtils;
 
-import net.otaupdate.lambdas.util.FirmwareIdentifier;
-import net.otaupdate.lambdas.util.HardwareIdentifier;
 import net.otaupdate.lambdas.util.Logger;
 
 
@@ -47,88 +45,83 @@ public class DatabaseManager
 	}
 	
 	
-	// TODO need to change table, etc
-	public String getLatestFirmwareUuid(FirmwareIdentifier fiIn)
+	public String getNextFirmwareForFirmwareUuid(String fwUuidIn)
 	{
 		String retVal = null;
 		
 		try
 		{
-			PreparedStatement statement = this.connection.prepareStatement("SELECT * from `migrationPaths` WHERE `fromVersionUuid`=?");
-			statement.setString(1, fiIn.getFirmwareUuid());
+			PreparedStatement statement = this.connection.prepareStatement("SELECT * from `firmwareImages` WHERE `uuid`=?");
+			statement.setString(1, fwUuidIn);
 			ResultSet rs = statement.executeQuery();
-			while( rs.next() )
-			{
-				retVal = rs.getString("toVersionUuid");
-				if( retVal != null ) break; 
-			}
+			if( !rs.first() ) return null;
+			
+			retVal = rs.getString("toVersionUuid");
+			if( retVal.isEmpty() ) retVal = null;
 		}
 		catch( Exception e )
 		{
 			Logger.getSingleton().error(e.getMessage());
 		}
 		
-		if( retVal == null ) Logger.getSingleton().warn(String.format("no target for firmwareUuid '%s'", fiIn.toString()));
+		if( retVal == null ) Logger.getSingleton().warn(String.format("no target for firmwareUuid '%s'", fwUuidIn));
 		
 		return retVal;
 	}
 	
 	
-	// TODO need to change table, etc
-	public String getLatestFirmwareUuid(HardwareIdentifier hiIn)
+	public String getLatestFirmwareForProcessorUuid(String hwUuidIn)
 	{
 		String retVal = null;
 		
 		try
 		{
-			PreparedStatement statement = this.connection.prepareStatement("SELECT * from `hardware` WHERE `hardwareUuid`=?");
-			statement.setString(1, hiIn.getHardwareUuid());
+			PreparedStatement statement = this.connection.prepareStatement("SELECT * from `processors` WHERE `uuid`=?");
+			statement.setString(1, hwUuidIn);
 			ResultSet rs = statement.executeQuery();
-			while( rs.next() )
-			{
-				retVal = rs.getString("latestFirmwareUuid");
-				if( retVal != null ) break;
-			}
+			if( !rs.first() ) return null;
+			
+			retVal = rs.getString("latestFirmwareUuid");
+			if( retVal.isEmpty() ) retVal = null;
 		}
 		catch( Exception e )
 		{
 			Logger.getSingleton().error(e.getMessage());
 		}
 		
-		if( retVal == null ) Logger.getSingleton().warn(String.format("no latest for hardwareUuid '%s'", hiIn.toString()));
+		if( retVal == null ) Logger.getSingleton().warn(String.format("no latest for hardwareUuid '%s'", hwUuidIn));
 		
 		return retVal;
 	}
 	
 	
-	// TODO need to change table, etc
-	public FirmwareImage getDownloadableFirmwareImageForFirmwareId(FirmwareIdentifier fiIn)
+	public String getNameFirmwareUuidd(String fwUuidIn)
 	{
-		FirmwareImage retVal = null;
+		String retVal = null;
 		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
 		try
 		{
-			PreparedStatement statement = this.connection.prepareStatement("SELECT * from `firmwareImages` WHERE `versionUuid`=?");
-			statement.setString(1, fiIn.getFirmwareUuid());
-			ResultSet rs = statement.executeQuery();
-			while( rs.next() )
-			{
-				String name = rs.getString("name");
-				if( name == null ) continue;
-				
-				String uuid = rs.getString("uuid");
-				if( uuid == null ) continue;
-				
-				retVal = new FirmwareImage(name, uuid);
-				break;
-			}
+			statement = this.connection.prepareStatement("SELECT * from `firmwareImages` WHERE `uuid`=?");
+			statement.setString(1, fwUuidIn);
+			rs = statement.executeQuery();
+			if( !rs.first() ) return null;
+			
+			retVal = rs.getString("name");
+			if( retVal.isEmpty() ) retVal = null;
 		}
 		catch( Exception e )
 		{
 			Logger.getSingleton().error(e.getMessage());
 		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
+			DbUtils.closeQuietly(statement);
+		}
 		
-		if( retVal == null ) Logger.getSingleton().warn(String.format("no firmware image for '%s'", fiIn.toString()));
+		if( retVal == null ) Logger.getSingleton().warn(String.format("no firmware image for '%s'", fwUuidIn));
 		
 		return retVal;
 	}
@@ -171,6 +164,63 @@ public class DatabaseManager
 			DbUtils.closeQuietly(statement);
 		}
 		
+		return retVal;
+	}
+	
+	
+	public boolean insertSelect(String insertTableNameIn, String columnNamesIn, String columnValuesIn, 
+								String selectTableNameIn, String joinClauseIn, String whereClauseIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			String sqlQueryString = String.format("INSERT INTO `%s` %s SELECT %s FROM %s", 
+					insertTableNameIn, columnNamesIn, columnValuesIn, selectTableNameIn);
+			if( joinClauseIn != null ) sqlQueryString += joinClauseIn;
+			if( whereClauseIn != null ) sqlQueryString += whereClauseIn;
+			Logger.getSingleton().debug(String.format("sqlQuery: '%s", sqlQueryString));
+			
+			statement = this.connection.prepareStatement(sqlQueryString);
+			retVal = (statement.executeUpdate() > 0);
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public boolean insert(String insertTableNameIn, String columnNamesIn, String columnValuesIn)
+	{
+		boolean retVal = false;
+
+		PreparedStatement statement = null;
+		try
+		{
+			String sqlQueryString = String.format("INSERT INTO `%s` %s VALUES %s", 
+					insertTableNameIn, columnNamesIn, columnValuesIn);
+			Logger.getSingleton().debug(String.format("sqlQuery: '%s", sqlQueryString));
+
+			statement = this.connection.prepareStatement(sqlQueryString);
+			retVal = (statement.executeUpdate() > 0);
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+
 		return retVal;
 	}
 	
@@ -409,6 +459,31 @@ public class DatabaseManager
 	}
 	
 	
+	public boolean addUserToOrganization(Integer userIdIn, String organizationUuidIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			statement = this.connection.prepareStatement("INSERT INTO `organizationUserMap` (userId, organizationUuid) VALUES(?, ?)");
+			statement.setInt(1, userIdIn);
+			statement.setString(2, organizationUuidIn);
+			retVal = statement.executeUpdate() == 1;
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
 	public boolean isUserPartOfOrganization(Integer userIdIn, String organizationUuidIn)
 	{
 		boolean retVal = false;
@@ -474,8 +549,9 @@ public class DatabaseManager
 		PreparedStatement statement = null;
 		try
 		{
-			statement = this.connection.prepareStatement("DELETE `organizationUserMap` FROM `organizationUserMap` JOIN `users` ON organizationUserMap.userId=users.id WHERE users.email=?");
+			statement = this.connection.prepareStatement("DELETE `organizationUserMap` FROM `organizationUserMap` JOIN `users` ON organizationUserMap.userId=users.id WHERE users.email=? AND organizations.uuid=?");
 			statement.setString(1, emailAddressIn);
+			statement.setString(2, organizationUuidIn);
 			retVal = statement.executeUpdate() == 1;
 		}
 		catch( Exception e )
@@ -491,9 +567,9 @@ public class DatabaseManager
 	}
 	
 	
-	public FirmwareImage insertFirmwareImage(String nameIn, String processorUuidIn, String deviceUuidIn, String organizationUuidIn)
+	public String insertFirmwareImageGetUuid(String nameIn, String processorUuidIn, String deviceUuidIn, String organizationUuidIn)
 	{
-		FirmwareImage retVal = null;
+		String retVal = null;
 		
 		PreparedStatement statement = null;
 		ResultSet rs = null;
@@ -521,7 +597,7 @@ public class DatabaseManager
 			if( statement.executeUpdate() != 1 ) return null;
 			
 			// if we made it here, the new firmware image has been created successfully
-			retVal = new FirmwareImage(nameIn, uuid);
+			retVal = uuid;
 		}
 		catch( Exception e )
 		{
