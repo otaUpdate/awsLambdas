@@ -9,27 +9,13 @@ import net.otaupdate.lambdas.util.ObjectHelper;
 
 public class CheckForUpdateHandler extends AbstractUnauthorizedRequestHandler
 {
-	private class ReturnValue
-	{
-		@SuppressWarnings("unused")
-		public final boolean updateAvailable;
-		public final String targetVersionUuid;
-		
-		ReturnValue(String targetVersionUuidIn)
-		{
-			this.targetVersionUuid = targetVersionUuidIn;
-			this.updateAvailable = (this.targetVersionUuid != null);
-		}
-	}
-	
-	
 	private String currentFwUuid = null;
 	
 	
 	@Override
 	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
-		this.currentFwUuid = ObjectHelper.parseObjectFromMap(paramsIn, "currentFwUuid", String.class);
+		this.currentFwUuid = ObjectHelper.parseObjectFromMap(paramsIn, "currFwUuid", String.class);
 		if( this.currentFwUuid == null ) return false;
 		
 		return true;
@@ -39,7 +25,6 @@ public class CheckForUpdateHandler extends AbstractUnauthorizedRequestHandler
 	@Override
 	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn)
 	{	
-		return new ReturnValue(dbManIn.getNextFirmwareForFirmwareUuid(this.currentFwUuid));
+		return dbManIn.getNextFirmwareForFirmwareUuid(this.currentFwUuid);
 	}
-
 }
