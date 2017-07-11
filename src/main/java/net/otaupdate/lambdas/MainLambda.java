@@ -11,6 +11,7 @@ import net.otaupdate.lambdas.handlers.AbstractRequestHandler;
 import net.otaupdate.lambdas.handlers.AbstractUnauthorizedRequestHandler;
 import net.otaupdate.lambdas.handlers.devController.CheckForUpdateHandler;
 import net.otaupdate.lambdas.handlers.devController.GetFirmwareDownloadLinkHandler;
+import net.otaupdate.lambdas.handlers.devController.GetFwDataHandler;
 import net.otaupdate.lambdas.handlers.devController.GetLatestVersionHandler;
 import net.otaupdate.lambdas.handlers.fw.DeleteFirmwareHandler;
 import net.otaupdate.lambdas.handlers.fw.PostFirmwareHandler;
@@ -28,6 +29,7 @@ import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.util.ErrorManager;
 import net.otaupdate.lambdas.util.Logger;
 import net.otaupdate.lambdas.util.ObjectHelper;
+import net.otaupdate.lambdas.util.ErrorManager.ErrorManagerException;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
@@ -38,6 +40,7 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 	{
 		HANDLER_MAP.put("checkForUpdate", CheckForUpdateHandler.class);
 		HANDLER_MAP.put("getFirmwareDownloadLink", GetFirmwareDownloadLinkHandler.class);
+		HANDLER_MAP.put("getFwData",  GetFwDataHandler.class);
 		HANDLER_MAP.put("getLatestVersion", GetLatestVersionHandler.class);
 
 		HANDLER_MAP.put("select", SelectHandler.class);
@@ -147,6 +150,11 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
     		{
     			retVal = ((AbstractUnauthorizedRequestHandler)handlerInstance).processRequestWithDatabaseManager(dbMan);
     		}
+    	}
+    	catch(ErrorManagerException e)
+    	{
+    		// rethrow it
+    		throw e;
     	}
     	catch(Exception e)
     	{
