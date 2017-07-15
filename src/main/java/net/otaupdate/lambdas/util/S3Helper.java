@@ -14,7 +14,7 @@ import com.amazonaws.util.IOUtils;
 public class S3Helper
 {
 	public static final String FW_S3BUCKET = "net-otaupdate-firmwareimages";
-	private static final int LINK_EXPIRATION_S = 60;
+	private static final int LINK_EXPIRATION_S = 5 * 60;
 	
 	
 	public static boolean doesImageExistForFirmwareWithUuid(String fwUuidIn)
@@ -39,6 +39,20 @@ public class S3Helper
 		// get our URL
 		URL s = AmazonS3ClientBuilder.defaultClient().generatePresignedUrl(req);
 		return (s != null) ? s.toString() : null;
+	}
+	
+	
+	public static Long getFirmwareSizeInBytes(String fwUuidIn)
+	{
+		Long retVal = null;
+		
+		try
+		{
+			retVal = AmazonS3ClientBuilder.defaultClient().getObjectMetadata(FW_S3BUCKET, fwUuidIn).getContentLength();
+		}
+		catch(Exception e) {}
+		
+		return retVal;
 	}
 	
 	
