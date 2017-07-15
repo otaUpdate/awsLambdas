@@ -5,39 +5,36 @@ import java.util.HashMap;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.Logger;
 import net.otaupdate.lambdas.util.ObjectHelper;
+import net.otaupdate.lambdas.util.S3Helper;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
-public class PostFirmwareHandler extends AbstractAuthorizedRequestHandler
+public class GetUploadLinkHandler extends AbstractAuthorizedRequestHandler
 {	
 
 	@SuppressWarnings("unused")
 	private class ReturnValue
 	{
-		public final String uuid;
+		public final String link;
 		
-		ReturnValue(String uuidIn)
+		ReturnValue(String linkIn)
 		{
-			this.uuid = uuidIn;
+			this.link = linkIn;
 		}
 	}
 	
 	
-	private String name = null;
 	private String organizationUuid = null;
 	private String deviceUuid = null;
 	private String processorUuid = null;
+	private String fwUuid = null;
 	
 	
 	@Override
 	public boolean parseAndValidateParameters(HashMap<String, Object> paramsIn)
 	{
-		// parse our parameters
-		this.name = ObjectHelper.parseObjectFromMap(paramsIn, "name", String.class);
-    	if( this.name == null ) return false;
-    	
+		// parse our parameters    	
     	this.organizationUuid = ObjectHelper.parseObjectFromMap(paramsIn, "organizationUuid", String.class);
     	if( this.organizationUuid == null ) return false;
     	
@@ -46,6 +43,9 @@ public class PostFirmwareHandler extends AbstractAuthorizedRequestHandler
     	
     	this.processorUuid = ObjectHelper.parseObjectFromMap(paramsIn, "processorUuid", String.class);
     	if( this.processorUuid == null ) return false;
+    	
+    	this.fwUuid = ObjectHelper.parseObjectFromMap(paramsIn, "fwUuid", String.class);
+    	if( this.fwUuid == null ) return false;
     	
     	return true;
 	}
@@ -60,16 +60,9 @@ public class PostFirmwareHandler extends AbstractAuthorizedRequestHandler
     	// if we made it here, user is part of this organization...proceed
 
 		// we're creating a new firmware image
-		String fwUuid = dbManIn.insertFirmwareImageGetUuid(this.name, this.processorUuid, this.deviceUuid, this.organizationUuid);
-		
-    	// do some logging
-		if( fwUuid != null ) Logger.getSingleton().debug(String.format("firmware image created: '%s'", fwUuid));
-		else Logger.getSingleton().warn(String.format("failed to create firmware image '%s' for processor '%s'", this.name, this.processorUuid));
-    	if( fwUuid == null ) ErrorManager.throwError(ErrorType.ServerError, "error creating/updating firmware image");
-		
-    	// do some logging
-    	Logger.getSingleton().debug(String.format("created fw '%s' '%s'", this.name, fwUuid));
+    	String url = S3Helper.getLimitedAccessUploadUrlForFirmwareWithUuid(this.fwUuid);
+    	if( url == null ) ErrorManager.throwError(ErrorType.BadRequest, "unable to generate url for given parameters");
     	
-    	return new ReturnValue(fwUuid); 
+		return new ReturnValue(url);
 	}
 }

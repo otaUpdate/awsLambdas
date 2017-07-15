@@ -14,6 +14,7 @@ import net.otaupdate.lambdas.handlers.devController.GetFirmwareDownloadLinkHandl
 import net.otaupdate.lambdas.handlers.devController.GetFwDataHandler;
 import net.otaupdate.lambdas.handlers.devController.GetLatestVersionHandler;
 import net.otaupdate.lambdas.handlers.fw.DeleteFirmwareHandler;
+import net.otaupdate.lambdas.handlers.fw.GetUploadLinkHandler;
 import net.otaupdate.lambdas.handlers.fw.PostFirmwareHandler;
 import net.otaupdate.lambdas.handlers.general.InsertSelectHandler;
 import net.otaupdate.lambdas.handlers.general.DeleteHandler;
@@ -57,6 +58,7 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 		HANDLER_MAP.put("listUsersInOrg", ListUsersInOrg.class);
 		
 		HANDLER_MAP.put("postFwImage", PostFirmwareHandler.class);
+		HANDLER_MAP.put("getUploadLink", GetUploadLinkHandler.class);
 		HANDLER_MAP.put("deleteFwImage", DeleteFirmwareHandler.class);
 	}
 	
