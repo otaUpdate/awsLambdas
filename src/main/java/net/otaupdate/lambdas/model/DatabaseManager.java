@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 import org.apache.commons.dbutils.DbUtils;
 
+import net.otaupdate.lambdas.handlers.devController.GetProcInstanceInfoHandler.GetProcInstanceInfoResponse;
 import net.otaupdate.lambdas.util.Logger;
 
 
@@ -671,6 +673,53 @@ public class DatabaseManager
 		}
 		finally
 		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
+	
+	
+	public GetProcInstanceInfoResponse getProcInstanceInfoResponse(String serialNumIn, String processorUuidIn, String deviceUuidIn, String organizationUuidIn)
+	{
+		GetProcInstanceInfoResponse retVal = null;
+		
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try
+		{
+			statement = this.connection.prepareStatement("SELECT updateHistory.timestamp, updateHistory.firmwareUuid, firmwareImages.name, firmwareImages.toVersionUuid FROM `updateHistory` "
+														+ "JOIN `firmwareImages` ON updateHistory.firmwareUuid=firmwareImages.uuid "
+														+ "JOIN `processors` ON firmwareImages.processorUuid=processors.uuid "
+														+ "JOIN `devices` ON processors.deviceUuid=devices.uuid "
+														+ "JOIN `organizations` ON devices.organizationUuid=organizations.uuid "
+														+ "WHERE "
+														+ "organizations.uuid=? AND "
+														+ "devices.uuid=? AND "
+														+ "processors.uuid=? AND "
+														+ "updateHistory.serialNumber=?");
+			statement.setString(1, organizationUuidIn);
+			statement.setString(2, deviceUuidIn);
+			statement.setString(3, processorUuidIn);
+			statement.setString(4, serialNumIn);
+			rs = statement.executeQuery();
+			if( rs.first() )
+			{
+				Date lastCheckIn = rs.getTimestamp("timestamp");
+				String fwUuid = rs.getString("firmwareUuid");
+				String fwName = rs.getString("name");
+				String toVersionUuid = rs.getString("toVersionUuid");
+				
+				retVal = new GetProcInstanceInfoResponse(lastCheckIn, fwUuid, fwName, (toVersionUuid != null));
+			}
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(rs);
 			DbUtils.closeQuietly(statement);
 		}
 		
