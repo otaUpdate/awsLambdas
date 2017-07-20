@@ -646,4 +646,34 @@ public class DatabaseManager
 		
 		return retVal;
 	}
+	
+	
+	public boolean updateUpdateHistory(String fwUuidIn, String serialNumberIn)
+	{
+		boolean retVal = false;
+		
+		PreparedStatement statement = null;
+		try
+		{
+			// first we need to make sure the processor/device/organization tree is OK
+			statement = this.connection.prepareStatement("INSERT INTO `updateHistory` "
+														+ "(firmwareUuid, serialNumber, timestamp) "
+														+ "VALUES(?, ?, NOW()) " 
+														+ "ON DUPLICATE KEY UPDATE "
+														+ "timestamp=NOW()");
+			statement.setString(1, fwUuidIn);
+			statement.setString(2, serialNumberIn);
+			retVal = (statement.executeUpdate() == 1 );
+		}
+		catch( Exception e )
+		{
+			Logger.getSingleton().error(e.getMessage());
+		}
+		finally
+		{
+			DbUtils.closeQuietly(statement);
+		}
+		
+		return retVal;
+	}
 }

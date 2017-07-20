@@ -11,6 +11,7 @@ import net.otaupdate.lambdas.util.S3Helper;
 public class CheckForUpdateHandler extends AbstractUnauthorizedRequestHandler
 {
 	private String currentFwUuid = null;
+	private String serialNum = null;
 	
 	
 	@Override
@@ -19,6 +20,9 @@ public class CheckForUpdateHandler extends AbstractUnauthorizedRequestHandler
 		this.currentFwUuid = ObjectHelper.parseObjectFromMap(paramsIn, "currFwUuid", String.class);
 		if( this.currentFwUuid == null ) return false;
 		
+		this.serialNum = ObjectHelper.parseObjectFromMap(paramsIn, "serialNum", String.class);
+		if( this.serialNum == null ) return false;
+		
 		return true;
 	}
 	
@@ -26,6 +30,9 @@ public class CheckForUpdateHandler extends AbstractUnauthorizedRequestHandler
 	@Override
 	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn)
 	{	
+		// log our information to the update history
+		dbManIn.updateUpdateHistory(this.currentFwUuid, this.serialNum);
+		
 		String targetFwUuid = dbManIn.getNextFirmwareForFirmwareUuid(this.currentFwUuid);
 		if( targetFwUuid == null ) return null;
 		
