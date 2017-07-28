@@ -65,22 +65,24 @@ public class GetProcessorTypesHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForDeviceType(userIdIn, this.orgUuid, this.devTypeUuid) ) return retVal;
 
-		Result<Record3<String, String, String>> result = 
-				dslContextIn.select(Processortypes.PROCESSORTYPES.UUID, Processortypes.PROCESSORTYPES.NAME, Processortypes.PROCESSORTYPES.LATESTFIRMWAREUUID)
+		Result<Record3<String, String, UInteger>> result = 
+				dslContextIn.select(Processortypes.PROCESSORTYPES.UUID, Processortypes.PROCESSORTYPES.NAME, Processortypes.PROCESSORTYPES.LATESTFIRMWAREID)
 				.from(Processortypes.PROCESSORTYPES)
 				.join(Devicetypes.DEVICETYPES)
-				.on(Processortypes.PROCESSORTYPES.DEVICETYPEUUID.eq(Devicetypes.DEVICETYPES.UUID))
+				.on(Processortypes.PROCESSORTYPES.DEVTYPEID.eq(Devicetypes.DEVICETYPES.ID))
 				.join(Organizations.ORGANIZATIONS)
-				.on(Devicetypes.DEVICETYPES.ORGANIZATIONUUID.eq(Organizations.ORGANIZATIONS.UUID))
+				.on(Devicetypes.DEVICETYPES.ORGID.eq(Organizations.ORGANIZATIONS.ID))
 				.and(Devicetypes.DEVICETYPES.UUID.eq(this.devTypeUuid))
 				.and(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))
 				.fetch();
 
-		for( Record3<String, String, String> currEntry : result )
+		for( Record3<String, String, UInteger> currEntry : result )
 		{
+			String toVersionUuid = dbManIn.getFirmwareImageUuidForId(currEntry.getValue(Processortypes.PROCESSORTYPES.LATESTFIRMWAREID));
+			
 			retVal.add( new ReturnValue(currEntry.get(Processortypes.PROCESSORTYPES.UUID), 
 					currEntry.get(Processortypes.PROCESSORTYPES.NAME), 
-					currEntry.get(Processortypes.PROCESSORTYPES.LATESTFIRMWAREUUID)) );
+					toVersionUuid) );
 		}
 
 		return retVal;

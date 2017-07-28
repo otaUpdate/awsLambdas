@@ -16,6 +16,9 @@ import net.otaupdate.lambdas.handlers.api.devType.CreateDeviceTypeHandler;
 import net.otaupdate.lambdas.handlers.api.devType.DeleteDeviceTypeHandler;
 import net.otaupdate.lambdas.handlers.api.devType.GetDeviceTypesHandler;
 import net.otaupdate.lambdas.handlers.api.devType.UpdateDeviceTypeHandler;
+import net.otaupdate.lambdas.handlers.api.devType.devices.CreateDeviceHandler;
+import net.otaupdate.lambdas.handlers.api.devType.devices.DeleteDeviceHandler;
+import net.otaupdate.lambdas.handlers.api.devType.devices.GetDevicesHandler;
 import net.otaupdate.lambdas.handlers.api.fwImages.CreateFwImageHandler;
 import net.otaupdate.lambdas.handlers.api.fwImages.DeleteFwImageHandler;
 import net.otaupdate.lambdas.handlers.api.fwImages.GetFwImageUploadLinkHandler;
@@ -36,7 +39,6 @@ import net.otaupdate.lambdas.handlers.api.procType.GetProcessorTypesHandler;
 import net.otaupdate.lambdas.handlers.api.procType.UpdateProcessorTypeHandler;
 import net.otaupdate.lambdas.handlers.devs.CheckForUpdateHandler;
 import net.otaupdate.lambdas.handlers.devs.GetFwDataHandler;
-import net.otaupdate.lambdas.handlers.devs.GetProcInstanceInfoHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.util.ErrorManager;
 import net.otaupdate.lambdas.util.Logger;
@@ -55,18 +57,20 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 	{
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_DEVS, "ks18rv", "POST"), CheckForUpdateHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_DEVS, "kj4yeq", "POST"), GetFwDataHandler.class);
-		HANDLER_MAP.put(generateHandlerMapString(API_ID_DEVS, "26d5n3", "POST"), GetProcInstanceInfoHandler.class);
 		
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "ymduq0", "POST"), AddUserToOrgHandler.class);
+		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "nilj0n", "POST"), CreateDeviceHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "5i14ml", "POST"), CreateDeviceTypeHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "eyj0he", "POST"), CreateFwImageHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "w4f4i0", "POST"), CreateOrganizationHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "4dhrn9", "POST"), CreateProcessorTypeHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "immv9r", "POST"), CreateUserHandler.class);
+		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "34fuko", "DELETE"), DeleteDeviceHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "2i366h", "DELETE"), DeleteDeviceTypeHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "qm0pbd", "DELETE"), DeleteFwImageHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "11jlcw", "DELETE"), DeleteOrganizationHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "t97iqg", "DELETE"), DeleteProcessorTypeHandler.class);
+		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "nilj0n", "GET"), GetDevicesHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "5i14ml", "GET"), GetDeviceTypesHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "eyj0he", "GET"), GetFwImagesHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "dy2f54", "GET"), GetFwImageUploadLinkHandler.class);
@@ -178,7 +182,7 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 		}
 		catch(Exception e)
 		{
-			ErrorManager.throwError(ErrorType.ServerError, String.format("unhandled exception: '%s'", e.getMessage()));
+			ErrorManager.throwError(ErrorType.ServerError, String.format("unhandled exception: '%s::%s'", e.getClass().getName(), e.getMessage()));
 		}
 		finally
 		{

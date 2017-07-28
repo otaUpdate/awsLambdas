@@ -71,9 +71,13 @@ public class CreateFwImageHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForProcessorType(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
 		
+		// get the processor type id
+		UInteger procTypeId = dbManIn.getProcTypeIdForUuid(this.procTypeUuid);
+		if( procTypeId == null ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		
 		// create the firmware image
-		int numRecordsModified = dslContextIn.insertInto(Firmwareimages.FIRMWAREIMAGES, Firmwareimages.FIRMWAREIMAGES.UUID, Firmwareimages.FIRMWAREIMAGES.PROCESSORTYPEUUID, Firmwareimages.FIRMWAREIMAGES.NAME)
-				.values(fwUuid, this.procTypeUuid, this.fwImageName)
+		int numRecordsModified = dslContextIn.insertInto(Firmwareimages.FIRMWAREIMAGES, Firmwareimages.FIRMWAREIMAGES.UUID, Firmwareimages.FIRMWAREIMAGES.NAME, Firmwareimages.FIRMWAREIMAGES.PROCTYPEID)
+				.values(fwUuid, this.fwImageName, procTypeId)
 				.execute();
 		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
 		

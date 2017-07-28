@@ -65,10 +65,12 @@ public class UpdateFwImageHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForFirmware(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid, this.fwUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
 		
+		UInteger toVersionId = dbManIn.getFirmwareImageIdForUuid(this.toVersionUuid);
+		
 		int numRecordsModified = 
 				dslContextIn.update(Firmwareimages.FIRMWAREIMAGES)
 				.set(Firmwareimages.FIRMWAREIMAGES.NAME, this.name)
-				.set(Firmwareimages.FIRMWAREIMAGES.TOVERSIONUUID, this.toVersionUuid)
+				.set(Firmwareimages.FIRMWAREIMAGES.TOVERSIONID, toVersionId)
 				.where(Firmwareimages.FIRMWAREIMAGES.UUID.eq(this.fwUuid))
 				.execute();
 		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);

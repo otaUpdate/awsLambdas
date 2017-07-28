@@ -70,25 +70,27 @@ public class GetFwImagesHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForProcessorType(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid) ) return retVal;
 		
-		Result<Record3<String, String, String>> result = 
-				dslContextIn.select(Firmwareimages.FIRMWAREIMAGES.UUID, Firmwareimages.FIRMWAREIMAGES.NAME, Firmwareimages.FIRMWAREIMAGES.TOVERSIONUUID)
+		Result<Record3<String, String, UInteger>> result = 
+				dslContextIn.select(Firmwareimages.FIRMWAREIMAGES.UUID, Firmwareimages.FIRMWAREIMAGES.NAME, Firmwareimages.FIRMWAREIMAGES.TOVERSIONID)
 				.from(Firmwareimages.FIRMWAREIMAGES)
 				.join(Processortypes.PROCESSORTYPES)
-				.on(Firmwareimages.FIRMWAREIMAGES.PROCESSORTYPEUUID.eq(Processortypes.PROCESSORTYPES.UUID))
+				.on(Firmwareimages.FIRMWAREIMAGES.PROCTYPEID.eq(Processortypes.PROCESSORTYPES.ID))
 				.join(Devicetypes.DEVICETYPES)
-				.on(Processortypes.PROCESSORTYPES.DEVICETYPEUUID.eq(Devicetypes.DEVICETYPES.UUID))
+				.on(Processortypes.PROCESSORTYPES.DEVTYPEID.eq(Devicetypes.DEVICETYPES.ID))
 				.join(Organizations.ORGANIZATIONS)
-				.on(Devicetypes.DEVICETYPES.ORGANIZATIONUUID.eq(Organizations.ORGANIZATIONS.UUID))
+				.on(Devicetypes.DEVICETYPES.ORGID.eq(Organizations.ORGANIZATIONS.ID))
 				.and(Processortypes.PROCESSORTYPES.UUID.eq(this.procTypeUuid))
 				.and(Devicetypes.DEVICETYPES.UUID.eq(this.devTypeUuid))
 				.and(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))
 				.fetch();
 
-		for( Record3<String, String, String> currEntry : result )
+		for( Record3<String, String, UInteger> currEntry : result )
 		{
+			String toVersionUuid = dbManIn.getFirmwareImageUuidForId(currEntry.getValue(Firmwareimages.FIRMWAREIMAGES.TOVERSIONID));
+			
 			retVal.add( new ReturnValue(currEntry.get(Firmwareimages.FIRMWAREIMAGES.UUID), 
 					currEntry.get(Firmwareimages.FIRMWAREIMAGES.NAME), 
-					currEntry.get(Firmwareimages.FIRMWAREIMAGES.TOVERSIONUUID)) );
+					toVersionUuid) );
 		}
 
 		return retVal;

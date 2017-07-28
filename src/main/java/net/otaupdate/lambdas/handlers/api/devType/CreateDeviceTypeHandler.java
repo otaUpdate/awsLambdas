@@ -63,9 +63,14 @@ public class CreateDeviceTypeHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForOrganization(userIdIn, this.orgUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
 
+		// get the organization id
+		UInteger orgId = dbManIn.getOrganizationIdForUuid(this.orgUuid);
+		if( orgId == null ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+
 		// create the device type
-		int numRecordsModified = dslContextIn.insertInto(Devicetypes.DEVICETYPES, Devicetypes.DEVICETYPES.UUID, Devicetypes.DEVICETYPES.ORGANIZATIONUUID, Devicetypes.DEVICETYPES.NAME)
-				.values(devTypeUuid, this.orgUuid, this.deviceTypeName)
+		int numRecordsModified = 
+				dslContextIn.insertInto(Devicetypes.DEVICETYPES, Devicetypes.DEVICETYPES.UUID, Devicetypes.DEVICETYPES.NAME, Devicetypes.DEVICETYPES.ORGID)
+				.values(devTypeUuid, this.deviceTypeName, orgId)
 				.execute();
 		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
 

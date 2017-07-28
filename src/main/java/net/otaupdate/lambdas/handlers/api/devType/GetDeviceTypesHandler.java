@@ -15,11 +15,16 @@ import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devicetypes;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
+import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 
 public class GetDeviceTypesHandler extends AbstractAuthorizedRequestHandler
 {
+	private final String ERR_STR = "error listing device types";
+	
+	
 	@SuppressWarnings("unused")
 	private class ReturnValue
 	{
@@ -57,12 +62,16 @@ public class GetDeviceTypesHandler extends AbstractAuthorizedRequestHandler
 		
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForOrganization(userIdIn, this.orgUuid) ) return retVal;
+		
+		// get the organization id
+		UInteger orgId = dbManIn.getOrganizationIdForUuid(this.orgUuid);
+		if( orgId == null ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STR);
 
 		Result<Record2<String, String>> result = 
 				dslContextIn.select(Devicetypes.DEVICETYPES.UUID, Devicetypes.DEVICETYPES.NAME)
 				.from(Devicetypes.DEVICETYPES)
 				.join(Organizations.ORGANIZATIONS)
-				.on(Devicetypes.DEVICETYPES.ORGANIZATIONUUID.eq(Organizations.ORGANIZATIONS.UUID))
+				.on(Devicetypes.DEVICETYPES.ORGID.eq(orgId))
 				.and(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))
 				.fetch();
 

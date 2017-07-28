@@ -61,7 +61,7 @@ public class GetUsersInOrgHandler extends AbstractAuthorizedRequestHandler
 		Result<Record1<String>> result = dslContextIn.select(Users.USERS.EMAIL)
 				.from(Organizations.ORGANIZATIONS)
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.UUID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID))
+				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
 				.join(Users.USERS)
 				.on(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(Users.USERS.ID))
 				.where(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))

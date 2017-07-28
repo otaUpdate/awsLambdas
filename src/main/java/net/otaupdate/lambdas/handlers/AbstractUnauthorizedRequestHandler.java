@@ -8,9 +8,5 @@ import net.otaupdate.lambdas.model.DatabaseManager;
 
 public abstract class AbstractUnauthorizedRequestHandler extends AbstractRequestHandler
 {
-	@Deprecated
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn) { return null; }
-	
-	//TODO make abstract again
-	public Object processRequestWithDatabase(DatabaseManager dbManIn, DSLContext dslContextIn) { return null; };
+	public abstract Object processRequestWithDatabase(DatabaseManager dbManIn, DSLContext dslContextIn);
 }

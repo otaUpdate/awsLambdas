@@ -47,9 +47,12 @@ public class AddUserToOrgHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForOrganization(userIdIn, this.orgUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
 
+		UInteger orgId = dbManIn.getOrganizationIdForUuid(this.orgUuid);
+		if( orgId == null ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		
 		// find the userID for this email address
 		UInteger userIdToAdd = dbManIn.getUserIdForEmailAddress(this.emailAddress);
-		if( (userIdToAdd == null) || !dbManIn.addUserToOrganization(userIdToAdd, this.orgUuid) ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( (userIdToAdd == null) || !dbManIn.addUserToOrganization(userIdToAdd, orgId) ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
 
 		return null;
 	}

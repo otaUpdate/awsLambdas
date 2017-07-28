@@ -48,7 +48,7 @@ public class GetOrganizations extends AbstractAuthorizedRequestHandler
 				dslContextIn.select(Organizations.ORGANIZATIONS.UUID, Organizations.ORGANIZATIONS.NAME)
 				.from(Organizations.ORGANIZATIONS)
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.UUID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID))
+				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
 				.where(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(userIdIn))
 				.fetch();
 

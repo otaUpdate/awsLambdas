@@ -61,10 +61,12 @@ public class UpdateProcessorTypeHandler extends AbstractAuthorizedRequestHandler
 		// check user permissions
 		if( !dbManIn.doesUserHavePermissionForProcessorType(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
 		
+		UInteger latestFwId = dbManIn.getFirmwareImageIdForUuid(this.latestFirmwareUuid);
+		
 		int numRecordsModified = 
 				dslContextIn.update(Processortypes.PROCESSORTYPES)
 				.set(Processortypes.PROCESSORTYPES.NAME, this.name)
-				.set(Processortypes.PROCESSORTYPES.LATESTFIRMWAREUUID, this.latestFirmwareUuid)
+				.set(Processortypes.PROCESSORTYPES.LATESTFIRMWAREID, latestFwId)
 				.where(Processortypes.PROCESSORTYPES.UUID.eq(this.procTypeUuid))
 				.execute();
 		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);

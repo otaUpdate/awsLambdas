@@ -118,6 +118,86 @@ public class DatabaseManager
 
 		return result.get(0).getValue(Users.USERS.ID);
 	}
+	
+	
+	public UInteger getOrganizationIdForUuid(String orgUuidIn)
+	{
+		if( orgUuidIn == null ) return null;
+		
+		Result<Record1<UInteger>> result =
+				this.getDslContext().select(Organizations.ORGANIZATIONS.ID)
+				.from(Organizations.ORGANIZATIONS)
+				.where(Organizations.ORGANIZATIONS.UUID.eq(orgUuidIn))
+				.limit(1)
+				.fetch();
+		if( result.size() < 1 ) return null;
+		
+		return result.get(0).getValue(Organizations.ORGANIZATIONS.ID);
+	}
+	
+	
+	public UInteger getDevTypeIdForUuid(String devTypeUuidIn)
+	{
+		if( devTypeUuidIn == null ) return null;
+		
+		Result<Record1<UInteger>> result =
+				this.getDslContext().select(Devicetypes.DEVICETYPES.ID)
+				.from(Devicetypes.DEVICETYPES)
+				.where(Devicetypes.DEVICETYPES.UUID.eq(devTypeUuidIn))
+				.limit(1)
+				.fetch();
+		if( result.size() < 1 ) return null;
+		
+		return result.get(0).getValue(Devicetypes.DEVICETYPES.ID);
+	}
+	
+	
+	public UInteger getProcTypeIdForUuid(String procTypeUuidIn)
+	{
+		if( procTypeUuidIn == null ) return null;
+		
+		Result<Record1<UInteger>> result =
+				this.getDslContext().select(Processortypes.PROCESSORTYPES.ID)
+				.from(Processortypes.PROCESSORTYPES)
+				.where(Processortypes.PROCESSORTYPES.UUID.eq(procTypeUuidIn))
+				.limit(1)
+				.fetch();
+		if( result.size() < 1 ) return null;
+		
+		return result.get(0).getValue(Processortypes.PROCESSORTYPES.ID);
+	}
+	
+	
+	public UInteger getFirmwareImageIdForUuid(String fwImageUuidIn)
+	{
+		if( fwImageUuidIn == null ) return null;
+		
+		Result<Record1<UInteger>> result =
+				this.getDslContext().select(Firmwareimages.FIRMWAREIMAGES.ID)
+				.from(Firmwareimages.FIRMWAREIMAGES)
+				.where(Firmwareimages.FIRMWAREIMAGES.UUID.eq(fwImageUuidIn))
+				.limit(1)
+				.fetch();
+		if( result.size() < 1 ) return null;
+		
+		return result.get(0).getValue(Processortypes.PROCESSORTYPES.ID);
+	}
+	
+	
+	public String getFirmwareImageUuidForId(UInteger fwIdIn)
+	{
+		if( fwIdIn == null ) return null;
+		
+		Result<Record1<String>> result =
+				this.getDslContext().select(Firmwareimages.FIRMWAREIMAGES.UUID)
+				.from(Firmwareimages.FIRMWAREIMAGES)
+				.where(Firmwareimages.FIRMWAREIMAGES.ID.eq(fwIdIn))
+				.limit(1)
+				.fetch();
+		if( result.size() < 1 ) return null;
+		
+		return result.get(0).getValue(Firmwareimages.FIRMWAREIMAGES.UUID);
+	}
 
 
 	public boolean doesUserHavePermissionForOrganization(UInteger userIdIn, String orgUuidIn)
@@ -125,7 +205,7 @@ public class DatabaseManager
 		Result<Record1<String>> result = this.getDslContext().select(Organizations.ORGANIZATIONS.UUID)
 				.from(Organizations.ORGANIZATIONS)
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.UUID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID))
+				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
 				.where(Organizations.ORGANIZATIONS.UUID.eq(orgUuidIn))
 				.and(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(userIdIn))
 				.limit(1)
@@ -140,9 +220,9 @@ public class DatabaseManager
 		Result<Record1<String>> result = this.getDslContext().select(Devicetypes.DEVICETYPES.UUID)
 				.from(Devicetypes.DEVICETYPES)
 				.join(Organizations.ORGANIZATIONS)
-				.on(Devicetypes.DEVICETYPES.ORGANIZATIONUUID.eq(Organizations.ORGANIZATIONS.UUID))
+				.on(Devicetypes.DEVICETYPES.ORGID.eq(Organizations.ORGANIZATIONS.ID))
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.UUID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID))
+				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
 				.where(Devicetypes.DEVICETYPES.UUID.eq(devTypeUuidIn))
 				.and(Organizations.ORGANIZATIONS.UUID.eq(orgUuidIn))
 				.and(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(userIdIn))
@@ -158,11 +238,11 @@ public class DatabaseManager
 		Result<Record1<String>> result = this.getDslContext().select(Processortypes.PROCESSORTYPES.UUID)
 				.from(Processortypes.PROCESSORTYPES)
 				.join(Devicetypes.DEVICETYPES)
-				.on(Processortypes.PROCESSORTYPES.DEVICETYPEUUID.eq(Devicetypes.DEVICETYPES.UUID))
+				.on(Processortypes.PROCESSORTYPES.DEVTYPEID.eq(Devicetypes.DEVICETYPES.ID))
 				.join(Organizations.ORGANIZATIONS)
-				.on(Devicetypes.DEVICETYPES.ORGANIZATIONUUID.eq(Organizations.ORGANIZATIONS.UUID))
+				.on(Devicetypes.DEVICETYPES.ORGID.eq(Organizations.ORGANIZATIONS.ID))
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.UUID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID))
+				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
 				.where(Processortypes.PROCESSORTYPES.UUID.eq(procTypeUuidIn))
 				.and(Devicetypes.DEVICETYPES.UUID.eq(devTypeUuidIn))
 				.and(Organizations.ORGANIZATIONS.UUID.eq(orgUuidIn))
@@ -179,13 +259,13 @@ public class DatabaseManager
 		Result<Record1<String>> result = this.getDslContext().select(Firmwareimages.FIRMWAREIMAGES.UUID)
 				.from(Firmwareimages.FIRMWAREIMAGES)
 				.join(Processortypes.PROCESSORTYPES)
-				.on(Firmwareimages.FIRMWAREIMAGES.PROCESSORTYPEUUID.eq(Processortypes.PROCESSORTYPES.UUID))
+				.on(Firmwareimages.FIRMWAREIMAGES.PROCTYPEID.eq(Processortypes.PROCESSORTYPES.ID))
 				.join(Devicetypes.DEVICETYPES)
-				.on(Processortypes.PROCESSORTYPES.DEVICETYPEUUID.eq(Devicetypes.DEVICETYPES.UUID))
+				.on(Processortypes.PROCESSORTYPES.DEVTYPEID.eq(Devicetypes.DEVICETYPES.ID))
 				.join(Organizations.ORGANIZATIONS)
-				.on(Devicetypes.DEVICETYPES.ORGANIZATIONUUID.eq(Organizations.ORGANIZATIONS.UUID))
+				.on(Devicetypes.DEVICETYPES.ORGID.eq(Organizations.ORGANIZATIONS.ID))
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.UUID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID))
+				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
 				.where(Firmwareimages.FIRMWAREIMAGES.UUID.eq(fwUuidIn))
 				.and(Processortypes.PROCESSORTYPES.UUID.eq(procTypeUuidIn))
 				.and(Devicetypes.DEVICETYPES.UUID.eq(devTypeUuidIn))
@@ -198,11 +278,13 @@ public class DatabaseManager
 	}
 
 
-	public boolean addUserToOrganization(UInteger userIdIn, String orgUuidIn)
+	public boolean addUserToOrganization(UInteger userIdIn, UInteger orgIdIn)
 	{
+		if( (userIdIn == null) || (orgIdIn == null) ) return false;
+		
 		int numRecordsModified = this.getDslContext().insertInto(Organizationusermap.ORGANIZATIONUSERMAP, 
-				Organizationusermap.ORGANIZATIONUSERMAP.USERID, Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONUUID)
-				.values(userIdIn, orgUuidIn)
+				Organizationusermap.ORGANIZATIONUSERMAP.USERID, Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID)
+				.values(userIdIn, orgIdIn)
 				.execute();
 		return (numRecordsModified == 1);
 	}
