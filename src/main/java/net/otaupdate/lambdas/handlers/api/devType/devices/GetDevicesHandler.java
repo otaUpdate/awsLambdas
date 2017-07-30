@@ -75,7 +75,7 @@ public class GetDevicesHandler extends AbstractAuthorizedRequestHandler
 		
 		public final String typeName;
 		public final String serialNumber;
-		public final List<ProcInfo> processors = new ArrayList<ProcInfo>();
+		public final List<ProcInfo> processorInfo = new ArrayList<ProcInfo>();
 		
 		ReturnValue(String typeNameIn, String serialNumberIn)
 		{
@@ -90,7 +90,7 @@ public class GetDevicesHandler extends AbstractAuthorizedRequestHandler
 			if( currEntry == null )
 			{
 				currEntry = new ProcInfo(typeNameIn, serialNumberIn);
-				this.processors.add(currEntry);
+				this.processorInfo.add(currEntry);
 			}
 			if( (lastSeenIn != null) && (fwImageNameIn != null) && (isUpToDate != null) )
 			{
@@ -101,7 +101,7 @@ public class GetDevicesHandler extends AbstractAuthorizedRequestHandler
 		
 		private ProcInfo getEntryForProcSerialNumber(String serialNumberIn)
 		{
-			for( ProcInfo currEntry : this.processors )
+			for( ProcInfo currEntry : this.processorInfo )
 			{
 				if( currEntry.serialNumber.equals(serialNumberIn) ) return currEntry;
 			}
