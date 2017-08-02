@@ -19,6 +19,7 @@ import net.otaupdate.lambdas.handlers.api.devType.UpdateDeviceTypeHandler;
 import net.otaupdate.lambdas.handlers.api.devType.devices.CreateDeviceHandler;
 import net.otaupdate.lambdas.handlers.api.devType.devices.DeleteDeviceHandler;
 import net.otaupdate.lambdas.handlers.api.devType.devices.GetDevicesHandler;
+import net.otaupdate.lambdas.handlers.api.devType.devices.GetUnprovisionedProcessorsHandler;
 import net.otaupdate.lambdas.handlers.api.fwImages.CreateFwImageHandler;
 import net.otaupdate.lambdas.handlers.api.fwImages.DeleteFwImageHandler;
 import net.otaupdate.lambdas.handlers.api.fwImages.GetFwImageUploadLinkHandler;
@@ -76,6 +77,7 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "dy2f54", "GET"), GetFwImageUploadLinkHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "w4f4i0", "GET"), GetOrganizations.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "4dhrn9", "GET"), GetProcessorTypesHandler.class);
+		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "xbu7rb", "GET"), GetUnprovisionedProcessorsHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "ymduq0", "GET"), GetUsersInOrgHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "w5mumg", "POST"), LoginHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "od7spe", "POST"), RemoveUserFromOrgHandler.class);
