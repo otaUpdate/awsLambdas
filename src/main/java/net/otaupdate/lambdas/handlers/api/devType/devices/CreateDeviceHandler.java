@@ -14,9 +14,11 @@ import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devices;
+import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareupdatehistory;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processors;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processortypes;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.records.DevicesRecord;
+import net.otaupdate.lambdas.model.db.otaupdates.tables.records.FirmwareimagesRecord;
 import net.otaupdate.lambdas.util.ErrorManager;
 import net.otaupdate.lambdas.util.ObjectHelper;
 import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
@@ -150,6 +152,14 @@ public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 				Logger.getSingleton().warn(TAG, String.format("error creating processor after device, device incomplete sn:'%s'", this.serialNumber));
 				ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING_GENERAL);
 			}
+		}
+		
+		// and be sure to remove any "unprovisioned checkins"
+		for( ProcInfoEntry currEntry : this.processors )
+		{
+			dslContextIn.delete(Firmwareupdatehistory.FIRMWAREUPDATEHISTORY)
+			.where(Firmwareupdatehistory.FIRMWAREUPDATEHISTORY.UNPROVISIONEDPROCSERIALNUM.eq(currEntry.serialNumber))
+			.execute();
 		}
 
 		return null;
