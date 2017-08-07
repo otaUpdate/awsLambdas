@@ -27,14 +27,6 @@ import net.otaupdate.lambdas.util.Logger;
 
 public class DatabaseManager
 {
-	public static final String TABLE_ORGANIZATIONS = "organizations";
-	public static final String TABLE_ORG_USER_MAP = "organizationUserMap";
-	public static final String TABLE_USERS = "users";
-	public static final String TABLE_FWUPDATE_HISTORY = "fwUpdateHistory";
-	public static final String TABLE_DEVICE_TYPES = "deviceTypes";
-	public static final String TABLE_PROCESSOR_TYPES = "processorTypes";
-	public static final String TABLE_FIRMWARE_IMAGES = "firmwareImages";
-
 	private static final String TAG = DatabaseManager.class.getSimpleName();
 	private static final String DB_HOST = System.getenv("db_endpoint");
 	private static final String DB_USERNAME = System.getenv("db_username");
@@ -42,12 +34,6 @@ public class DatabaseManager
 	private static final String DB_NAME = "otaUpdates";
 
 	private static final int LOGIN_TOKEN_PERIOD_MINS = 60;
-
-
-	public interface DatabaseQueryHelper<T>
-	{
-		public T executeQueryReturnResult(DSLContext create);
-	}
 
 
 	private final Connection connection;
