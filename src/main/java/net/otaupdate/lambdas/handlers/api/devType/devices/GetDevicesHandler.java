@@ -17,6 +17,7 @@ import org.jooq.Result;
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devices;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devicetypes;
@@ -24,9 +25,9 @@ import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareimages;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareupdatehistory;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processors;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processortypes;
-import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
 public class GetDevicesHandler extends AbstractAuthorizedRequestHandler
@@ -126,16 +127,16 @@ public class GetDevicesHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		Map<String, ReturnValue> retVals = new HashMap<String, ReturnValue>();
 		
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForDeviceType(userIdIn, this.orgUuid, this.devTypeUuid) ) return retVals.values();
+		if( !userIn.hasPermissionForDeviceType(this.orgUuid, this.devTypeUuid, dslContextIn) ) return retVals.values();
 		
 		// get device type id
 		UInteger devTypeId = dbManIn.getDevTypeIdForUuid(this.devTypeUuid);
-		if( devTypeId == null ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STR);
+		if( devTypeId == null ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		// iterate over our devices
 		Result<Record7<String, String, String, String, Timestamp, String, UInteger>> result =

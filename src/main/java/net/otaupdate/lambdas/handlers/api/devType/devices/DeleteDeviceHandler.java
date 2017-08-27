@@ -3,20 +3,20 @@ package net.otaupdate.lambdas.handlers.api.devType.devices;
 import java.util.Map;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devices;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 public class DeleteDeviceHandler extends AbstractAuthorizedRequestHandler
 {
-	private static final String ERR_STRING = "error deleting device";
+	private static final String ERR_STR = "error deleting device";
 	
 	
 	private String orgUuid = null;
@@ -44,17 +44,17 @@ public class DeleteDeviceHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForDeviceType(userIdIn, this.orgUuid, this.devTypeUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( !userIn.hasPermissionForDevice(this.orgUuid, this.devTypeUuid, this.devSerialNumber, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		// delete the device type (will cascade to all other tables appropriately)
 		int numRecordsModified = 
 				dslContextIn.delete(Devices.DEVICES)
 				.where(Devices.DEVICES.SERIALNUMBER.eq(this.devSerialNumber))
 				.execute();
-		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( numRecordsModified < 1 ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		return null;
 	}

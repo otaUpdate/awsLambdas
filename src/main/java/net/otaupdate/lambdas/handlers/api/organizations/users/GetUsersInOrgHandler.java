@@ -5,17 +5,18 @@ import java.util.List;
 import java.util.Map;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 import org.jooq.Record1;
 import org.jooq.Result;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizationusermap;
-import net.otaupdate.lambdas.model.db.otaupdates.tables.Users;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.CognitoHelper;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 
@@ -51,25 +52,25 @@ public class GetUsersInOrgHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{
 		List<ReturnValue> retVal = new ArrayList<ReturnValue>();
 		
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForOrganization(userIdIn, this.orgUuid) ) return retVal;
+		if( !userIn.hasPermissionForOrganization(this.orgUuid, dslContextIn) ) return retVal;
 		
-		Result<Record1<String>> result = dslContextIn.select(Users.USERS.EMAIL)
-				.from(Organizations.ORGANIZATIONS)
-				.join(Organizationusermap.ORGANIZATIONUSERMAP)
-				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
-				.join(Users.USERS)
-				.on(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(Users.USERS.ID))
+		Result<Record1<String>> result = dslContextIn.select(Organizationusermap.ORGANIZATIONUSERMAP.AWSSUB)
+				.from(Organizationusermap.ORGANIZATIONUSERMAP)
+				.join(Organizations.ORGANIZATIONS)
+				.on(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID.eq(Organizations.ORGANIZATIONS.ID))
 				.where(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))
 				.fetch();
 		
 		for( Record1<String> currEntry : result )
 		{
-			retVal.add( new ReturnValue(currEntry.getValue(Users.USERS.EMAIL)) );
+			String currAwsSub = currEntry.getValue(Organizationusermap.ORGANIZATIONUSERMAP.AWSSUB);
+			String email = CognitoHelper.getEmailFromAwsSub(currAwsSub);
+			if( email != null ) retVal.add( new ReturnValue(email) );
 		}
 		
 		return retVal;

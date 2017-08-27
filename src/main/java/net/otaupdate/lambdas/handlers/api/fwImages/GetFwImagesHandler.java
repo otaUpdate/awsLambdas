@@ -12,11 +12,13 @@ import org.jooq.Result;
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devicetypes;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareimages;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processortypes;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 
@@ -63,12 +65,12 @@ public class GetFwImagesHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		List<ReturnValue> retVal = new ArrayList<ReturnValue>();
-
+		
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForProcessorType(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid) ) return retVal;
+		if( !userIn.hasPermissionForProcessorType(this.orgUuid, this.devTypeUuid, this.procTypeUuid, dslContextIn) ) return retVal;
 		
 		Result<Record3<String, String, UInteger>> result = 
 				dslContextIn.select(Firmwareimages.FIRMWAREIMAGES.UUID, Firmwareimages.FIRMWAREIMAGES.NAME, Firmwareimages.FIRMWAREIMAGES.TOVERSIONID)
@@ -83,7 +85,7 @@ public class GetFwImagesHandler extends AbstractAuthorizedRequestHandler
 				.and(Devicetypes.DEVICETYPES.UUID.eq(this.devTypeUuid))
 				.and(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))
 				.fetch();
-
+		
 		for( Record3<String, String, UInteger> currEntry : result )
 		{
 			String toVersionUuid = dbManIn.getFirmwareImageUuidForId(currEntry.getValue(Firmwareimages.FIRMWAREIMAGES.TOVERSIONID));

@@ -3,16 +3,16 @@ package net.otaupdate.lambdas.handlers.api.fwImages;
 import java.util.Map;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 import net.otaupdate.lambdas.util.S3Helper;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
 public class GetFwImageUploadLinkHandler extends AbstractAuthorizedRequestHandler
@@ -59,14 +59,14 @@ public class GetFwImageUploadLinkHandler extends AbstractAuthorizedRequestHandle
 	}
 
 
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForFirmware(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid, this.fwUuid) ) ErrorManager.throwError(ErrorType.BadRequest, "not authorized to access this resource");
+		if( !userIn.hasPermissionForFirmware(this.orgUuid, this.devTypeUuid, this.procTypeUuid, this.fwUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, "not authorized to access this resource");
 
 		// we're creating a new firmware image
 		String url = S3Helper.getLimitedAccessUploadUrlForFirmwareWithUuid(this.fwUuid);
-		if( url == null ) ErrorManager.throwError(ErrorType.BadRequest, "unable to generate url for given parameters");
+		if( url == null ) throw new BreakwallAwsException(ErrorType.BadRequest, "unable to generate url for given parameters");
 
 		return new ReturnValue(url);
 	}

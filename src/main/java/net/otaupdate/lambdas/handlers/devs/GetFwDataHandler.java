@@ -8,17 +8,14 @@ import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractUnauthorizedRequestHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
-import net.otaupdate.lambdas.util.Logger;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 import net.otaupdate.lambdas.util.S3Helper;
 
 
 public class GetFwDataHandler extends AbstractUnauthorizedRequestHandler
 {
-	private static final String TAG = GetFwDataHandler.class.getSimpleName();
-	
 	private String currentFwUuid = null;
 	private Integer offset = null;
 	private Integer maxNumBytes = null;
@@ -53,9 +50,7 @@ public class GetFwDataHandler extends AbstractUnauthorizedRequestHandler
 			retVal = S3Helper.getBytesForFirmwareUuid(this.currentFwUuid, this.offset, this.maxNumBytes);
 		}
 		catch( Exception e ) { }
-		if( retVal == null ) ErrorManager.throwError(ErrorType.BadRequest, "error fetching requested bytes");
-		
-		Logger.getSingleton().debug(TAG, String.format("returning %d bytes", retVal.length));
+		if( retVal == null ) throw new BreakwallAwsException(ErrorType.BadRequest, "error fetching requested bytes");
 		
 		return retVal;
 	}

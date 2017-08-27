@@ -9,15 +9,16 @@ import org.jooq.types.UInteger;
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareimages;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 public class CreateFwImageHandler extends AbstractAuthorizedRequestHandler
 {
-	private static final String ERR_STRING = "error creating processor type";
+	private static final String ERR_STR = "error creating processor type";
 	
 	
 	@SuppressWarnings("unused")
@@ -64,22 +65,22 @@ public class CreateFwImageHandler extends AbstractAuthorizedRequestHandler
 	
 	
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{
 		String fwUuid = UUID.randomUUID().toString();
 		
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForProcessorType(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( !userIn.hasPermissionForProcessorType(this.orgUuid, this.devTypeUuid, this.procTypeUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		// get the processor type id
 		UInteger procTypeId = dbManIn.getProcTypeIdForUuid(this.procTypeUuid);
-		if( procTypeId == null ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( procTypeId == null ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		// create the firmware image
 		int numRecordsModified = dslContextIn.insertInto(Firmwareimages.FIRMWAREIMAGES, Firmwareimages.FIRMWAREIMAGES.UUID, Firmwareimages.FIRMWAREIMAGES.NAME, Firmwareimages.FIRMWAREIMAGES.PROCTYPEID)
 				.values(fwUuid, this.fwImageName, procTypeId)
 				.execute();
-		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( numRecordsModified < 1 ) throw new BreakwallAwsException(ErrorType.ServerError, ERR_STR);
 		
 		return new ReturnValue(fwUuid);
 	}

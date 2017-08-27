@@ -3,20 +3,20 @@ package net.otaupdate.lambdas.handlers.api.organizations;
 import java.util.Map;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 public class UpdateOrganizationHandler extends AbstractAuthorizedRequestHandler
 {
-	private static final String ERR_STRING = "error updating organization";
+	private static final String ERR_STR = "error updating organization";
 	
 	
 	private String orgUuid = null;
@@ -43,17 +43,17 @@ public class UpdateOrganizationHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForOrganization(userIdIn, this.orgUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( !userIn.hasPermissionForOrganization(this.orgUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		int numRecordsModified = 
 				dslContextIn.update(Organizations.ORGANIZATIONS)
 				.set(Organizations.ORGANIZATIONS.NAME, this.name)
 				.where(Organizations.ORGANIZATIONS.UUID.eq(this.orgUuid))
 				.execute();
-		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( numRecordsModified < 1 ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		return null;
 	}

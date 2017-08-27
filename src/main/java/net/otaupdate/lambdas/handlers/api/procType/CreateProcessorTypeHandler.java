@@ -9,15 +9,16 @@ import org.jooq.types.UInteger;
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processortypes;
-import net.otaupdate.lambdas.util.ErrorManager;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 public class CreateProcessorTypeHandler extends AbstractAuthorizedRequestHandler
 {
-	private static final String ERR_STRING = "error creating processor type";
+	private static final String ERR_STR = "error creating processor type";
 	
 	
 	@SuppressWarnings("unused")
@@ -60,22 +61,22 @@ public class CreateProcessorTypeHandler extends AbstractAuthorizedRequestHandler
 	
 	
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{
 		String procTypeUuid = UUID.randomUUID().toString();
 		
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForDeviceType(userIdIn, this.orgUuid, this.devTypeUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( !userIn.hasPermissionForDeviceType(this.orgUuid, this.devTypeUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		// get the device type id
 		UInteger devTypeId = dbManIn.getDevTypeIdForUuid(this.devTypeUuid);
-		if( devTypeId == null ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( devTypeId == null ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		
 		// create the device type
 		int numRecordsModified = dslContextIn.insertInto(Processortypes.PROCESSORTYPES, Processortypes.PROCESSORTYPES.UUID, Processortypes.PROCESSORTYPES.NAME, Processortypes.PROCESSORTYPES.DEVTYPEID)
 				.values(procTypeUuid, this.processorTypeName, devTypeId)
 				.execute();
-		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( numRecordsModified < 1 ) throw new BreakwallAwsException(ErrorType.ServerError, ERR_STR);
 		
 		return new ReturnValue(procTypeUuid);
 	}

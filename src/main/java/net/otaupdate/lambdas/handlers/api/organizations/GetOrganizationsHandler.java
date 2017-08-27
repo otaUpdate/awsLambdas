@@ -4,19 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 import org.jooq.Record2;
 import org.jooq.Result;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizationusermap;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
 
 
-public class GetOrganizations extends AbstractAuthorizedRequestHandler
+public class GetOrganizationsHandler extends AbstractAuthorizedRequestHandler
 {
 	@SuppressWarnings("unused")
 	private class ReturnValue
@@ -40,7 +41,7 @@ public class GetOrganizations extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		List<ReturnValue> retVal = new ArrayList<ReturnValue>();
 
@@ -49,7 +50,7 @@ public class GetOrganizations extends AbstractAuthorizedRequestHandler
 				.from(Organizations.ORGANIZATIONS)
 				.join(Organizationusermap.ORGANIZATIONUSERMAP)
 				.on(Organizations.ORGANIZATIONS.ID.eq(Organizationusermap.ORGANIZATIONUSERMAP.ORGANIZATIONID))
-				.where(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(userIdIn))
+				.where(Organizationusermap.ORGANIZATIONUSERMAP.AWSSUB.eq(userIn.getAwsSub()))
 				.fetch();
 
 		for( Record2<String, String> currEntry : result )

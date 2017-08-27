@@ -3,23 +3,23 @@ package net.otaupdate.lambdas.handlers.api.fwImages;
 import java.util.Map;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareimages;
-import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.Logger;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 import net.otaupdate.lambdas.util.S3Helper;
 
 public class DeleteFwImageHandler extends AbstractAuthorizedRequestHandler
 {
 	private static final String TAG = DeleteFwImageHandler.class.getSimpleName();
-	private static final String ERR_STRING = "error deleting firmware image";
+	private static final String ERR_STR = "error deleting firmware image";
 
 
 	private String orgUuid = null;
@@ -51,10 +51,10 @@ public class DeleteFwImageHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForFirmware(userIdIn, this.orgUuid, this.devTypeUuid, this.procTypeUuid, this.fwUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( !userIn.hasPermissionForFirmware(this.orgUuid, this.devTypeUuid, this.procTypeUuid, this.fwUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 
 		// always delete the s3 key first so we don't leave any dangling files
 		// billing-wise we'd prefer a dangling database entry than an S3 entry
@@ -66,7 +66,7 @@ public class DeleteFwImageHandler extends AbstractAuthorizedRequestHandler
 				dslContextIn.delete(Firmwareimages.FIRMWAREIMAGES)
 				.where(Firmwareimages.FIRMWAREIMAGES.UUID.eq(this.fwUuid))
 				.execute();
-		if( numRecordsModified < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( numRecordsModified < 1 ) throw new BreakwallAwsException(ErrorType.ServerError, ERR_STR);
 
 		return null;
 	}

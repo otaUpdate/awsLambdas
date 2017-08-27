@@ -12,10 +12,12 @@ import org.jooq.Result;
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devicetypes;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processortypes;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 
@@ -58,12 +60,12 @@ public class GetProcessorTypesHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		List<ReturnValue> retVal = new ArrayList<ReturnValue>();
 
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForDeviceType(userIdIn, this.orgUuid, this.devTypeUuid) ) return retVal;
+		if( !userIn.hasPermissionForDeviceType(this.orgUuid, this.devTypeUuid, dslContextIn) ) return retVal;
 
 		Result<Record3<String, String, UInteger>> result = 
 				dslContextIn.select(Processortypes.PROCESSORTYPES.UUID, Processortypes.PROCESSORTYPES.NAME, Processortypes.PROCESSORTYPES.LATESTFIRMWAREID)

@@ -3,21 +3,22 @@ package net.otaupdate.lambdas.handlers.api.organizations.users;
 import java.util.Map;
 
 import org.jooq.DSLContext;
-import org.jooq.types.UInteger;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizationusermap;
-import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
+import net.otaupdate.lambdas.util.CognitoHelper;
 import net.otaupdate.lambdas.util.ObjectHelper;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 
 
 public class RemoveUserFromOrgHandler extends AbstractAuthorizedRequestHandler
 {
-	private static final String ERR_STRING = "error removing user";
+	private static final String ERR_STR = "error removing user";
 
 
 	private String orgUuid = null;
@@ -44,18 +45,18 @@ public class RemoveUserFromOrgHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForOrganization(userIdIn, this.orgUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+		if( !userIn.hasPermissionForOrganization(this.orgUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 
-		UInteger userIdToRemove = dbManIn.getUserIdForEmailAddress(this.emailAddress);
-		if( (userIdToRemove == null) || 
+		String awsSubToRemove = CognitoHelper.getUsernameFromEmail(this.emailAddress);
+		if( (awsSubToRemove == null) || 
 				(dslContextIn.delete(Organizationusermap.ORGANIZATIONUSERMAP)
-						.where(Organizationusermap.ORGANIZATIONUSERMAP.USERID.eq(userIdToRemove))
+						.where(Organizationusermap.ORGANIZATIONUSERMAP.AWSSUB.eq(awsSubToRemove))
 						.execute() < 1) )
 		{
-			ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING);
+			throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		}
 
 		return null;

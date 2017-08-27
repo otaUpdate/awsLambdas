@@ -12,23 +12,23 @@ import org.jooq.types.UInteger;
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devices;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareupdatehistory;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processors;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Processortypes;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.records.DevicesRecord;
-import net.otaupdate.lambdas.model.db.otaupdates.tables.records.FirmwareimagesRecord;
-import net.otaupdate.lambdas.util.ErrorManager;
 import net.otaupdate.lambdas.util.ObjectHelper;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.Logger;
 
 
 public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 {		
 	private static final String TAG = CreateDeviceHandler.class.getSimpleName();
-	private static final String ERR_STRING_GENERAL = "error creating device";
+	private static final String ERR_STR = "error creating device";
 
 
 	private class ProcInfoEntry
@@ -87,14 +87,14 @@ public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{	
 		// check user permissions
-		if( !dbManIn.doesUserHavePermissionForDeviceType(userIdIn, this.orgUuid, this.devTypeUuid) ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING_GENERAL);
+		if( !userIn.hasPermissionForDeviceType(this.orgUuid, this.devTypeUuid, dslContextIn) ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 
 		// get devType id
 		UInteger devTypeId = dbManIn.getDevTypeIdForUuid(this.devTypeUuid);
-		if( devTypeId == null ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING_GENERAL);
+		if( devTypeId == null ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 
 		// first, we should verify that we have all of the needed procTypeUuids in the provided array
 		Result<Record2<UInteger, String>> result = 
@@ -116,7 +116,7 @@ public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 			
 			if( !didMatch )
 			{
-				ErrorManager.throwError(ErrorType.BadRequest, String.format("missing processor entry for procTypeUuid '%s'", currRecord.getValue(Processortypes.PROCESSORTYPES.UUID)));
+				throw new BreakwallAwsException(ErrorType.BadRequest, String.format("missing processor entry for procTypeUuid '%s'", currRecord.getValue(Processortypes.PROCESSORTYPES.UUID)));
 			}
 		}
 		
@@ -125,7 +125,7 @@ public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 		{
 			if( currPIE.procTypeId == null )
 			{
-				ErrorManager.throwError(ErrorType.BadRequest, String.format("extraneuous processor entry for procTypeUuid '%s'", currPIE.procTypeUuid));
+				throw new BreakwallAwsException(ErrorType.BadRequest, String.format("extraneuous processor entry for procTypeUuid '%s'", currPIE.procTypeUuid));
 			}
 		}
 		
@@ -136,7 +136,7 @@ public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 				.set(Devices.DEVICES.DEVTYPEID, devTypeId)
 				.returning()
 				.fetch();
-		if( result_devices.size() < 1 ) ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING_GENERAL);
+		if( result_devices.size() < 1 ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 		UInteger devId = result_devices.get(0).getId();
 		
 		// now add each of our processors
@@ -150,7 +150,7 @@ public class CreateDeviceHandler extends AbstractAuthorizedRequestHandler
 			if( numModifedRecords < 1 )
 			{
 				Logger.getSingleton().warn(TAG, String.format("error creating processor after device, device incomplete sn:'%s'", this.serialNumber));
-				ErrorManager.throwError(ErrorType.BadRequest, ERR_STRING_GENERAL);
+				throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 			}
 		}
 		

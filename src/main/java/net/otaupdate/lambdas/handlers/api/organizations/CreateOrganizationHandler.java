@@ -5,23 +5,23 @@ import java.util.UUID;
 
 import org.jooq.DSLContext;
 import org.jooq.Result;
-import org.jooq.types.UInteger;
 
 import net.otaupdate.lambdas.AwsPassThroughBody;
 import net.otaupdate.lambdas.AwsPassThroughParameters;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
+import net.otaupdate.lambdas.handlers.ExecutingUser;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.records.OrganizationsRecord;
-import net.otaupdate.lambdas.util.ErrorManager;
+import net.otaupdate.lambdas.util.BreakwallAwsException;
+import net.otaupdate.lambdas.util.BreakwallAwsException.ErrorType;
 import net.otaupdate.lambdas.util.Logger;
-import net.otaupdate.lambdas.util.ErrorManager.ErrorType;
 import net.otaupdate.lambdas.util.ObjectHelper;
 
 public class CreateOrganizationHandler extends AbstractAuthorizedRequestHandler
 {
 	private static final String TAG = CreateOrganizationHandler.class.getSimpleName();
-	private static final String ERR_STRING = "error creating organization";
+	private static final String ERR_STR = "error creating organization";
 
 
 	@SuppressWarnings("unused")
@@ -53,7 +53,7 @@ public class CreateOrganizationHandler extends AbstractAuthorizedRequestHandler
 
 
 	@Override
-	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, UInteger userIdIn)
+	public Object processRequestWithDatabaseManager(DatabaseManager dbManIn, DSLContext dslContextIn, ExecutingUser userIn) throws BreakwallAwsException
 	{
 		String orgUuid = UUID.randomUUID().toString();
 
@@ -63,14 +63,14 @@ public class CreateOrganizationHandler extends AbstractAuthorizedRequestHandler
 				.values(orgUuid, this.orgName)
 				.returning(Organizations.ORGANIZATIONS.ID)
 				.fetch();
-		if( result.size() < 1 ) ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+		if( result.size() < 1 ) throw new BreakwallAwsException(ErrorType.BadRequest, ERR_STR);
 
 
 		// add the user
-		if( !dbManIn.addUserToOrganization(userIdIn, result.get(0).getId()) )
+		if( !dbManIn.addUserToOrganization(userIn.getAwsSub(), result.get(0).getId()) )
 		{
 			Logger.getSingleton().warn(TAG, String.format("error assigning creating user to organization, organization orphaned '%s'", orgUuid));
-			ErrorManager.throwError(ErrorType.ServerError, ERR_STRING);
+			throw new BreakwallAwsException(ErrorType.ServerError, ERR_STR);
 		}
 
 		return new ReturnValue(orgUuid);
