@@ -4,9 +4,12 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jooq.types.UInteger;
+
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 
+import net.otaupdate.lambdas.handlers.AbstractApiKeyAuthorizedRequestHandler;
 import net.otaupdate.lambdas.handlers.AbstractAuthorizedRequestHandler;
 import net.otaupdate.lambdas.handlers.AbstractRequestHandler;
 import net.otaupdate.lambdas.handlers.AbstractUnauthorizedRequestHandler;
@@ -37,6 +40,7 @@ import net.otaupdate.lambdas.handlers.api.procType.GetProcessorTypesHandler;
 import net.otaupdate.lambdas.handlers.api.procType.UpdateProcessorTypeHandler;
 import net.otaupdate.lambdas.handlers.devs.CheckForUpdateHandler;
 import net.otaupdate.lambdas.handlers.devs.GetFwDataHandler;
+import net.otaupdate.lambdas.handlers.ext.DeviceStatusHandler;
 import net.otaupdate.lambdas.handlers.testing.TestingLoginHandler;
 import net.otaupdate.lambdas.model.DatabaseManager;
 import net.otaupdate.lambdas.util.BreakwallAwsException;
@@ -81,6 +85,8 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "qm0pbd", "POST"),   UpdateFwImageHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "11jlcw", "POST"),   UpdateOrganizationHandler.class);
 		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "t97iqg", "POST"),   UpdateProcessorTypeHandler.class);
+		
+		HANDLER_MAP.put(generateHandlerMapString(API_ID_API, "bu6zf1", "POST"),   DeviceStatusHandler.class);
 	}
 	
 
@@ -142,20 +148,6 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 		try{ dbMan = new DatabaseManager(); } 
 		catch( SQLException e ) { throw new BreakwallAwsException(ErrorType.ServerError, e.getMessage()); }
 
-		
-		// authorized handler...check our authorization token first
-		ExecutingUser execUser = null;
-		if( handlerInstance instanceof AbstractAuthorizedRequestHandler )
-		{
-			String token = ObjectHelper.parseObjectFromMap(params.getHeaderParameters(), "Authorization", String.class);
-			if( token == null ) throw new BreakwallAwsException(ErrorType.Unauthorized, "error parsing authorization token");
-			
-			// if we made it into our Lambda, API Gateway verifier should have verified the token's authenticity
-			execUser = new ExecutingUser(token);
-			
-			// if we made it here, the user authorization token is valid...check whether the user is a super user
-		}
-
 
 		// now perform our operation
 		Object retVal = null;
@@ -164,7 +156,28 @@ public class MainLambda implements RequestHandler<HashMap<?,?>, Object>
 			// check what kind of handler we have
 			if( handlerInstance instanceof AbstractAuthorizedRequestHandler )
 			{
+				// authorized handler...check our authorization token first
+				String token = ObjectHelper.parseObjectFromMap(params.getHeaderParameters(), "Authorization", String.class);
+				if( token == null ) throw new BreakwallAwsException(ErrorType.Unauthorized, "error parsing authorization token");
+				
+				// if we made it into our Lambda, API Gateway verifier should have verified the token's authenticity
+				ExecutingUser execUser = new ExecutingUser(token);
+				
+				// if we made it here, the user authorization token is valid...call our handler
 				retVal = ((AbstractAuthorizedRequestHandler)handlerInstance).processRequestWithDatabaseManager(dbMan, dbMan.getDslContext(), execUser);
+			}
+			else if ( handlerInstance instanceof AbstractApiKeyAuthorizedRequestHandler )
+			{
+				// api key handler...make sure our ApiKey is valid
+				String apiKey = ObjectHelper.parseObjectFromMap(params.getHeaderParameters(), "x-api-key", String.class);
+				if( apiKey == null ) throw new BreakwallAwsException(ErrorType.Unauthorized, "error parsing api key");
+				
+				// get our organizationId
+				UInteger orgId = dbMan.getOrganizationIdForApiKey(apiKey);
+				if( orgId == null ) throw new BreakwallAwsException(ErrorType.Unauthorized, "invalid api key");
+				
+				// if we made it here, the api key is valid and we have a valid organization id...call our handler
+				retVal = ((AbstractApiKeyAuthorizedRequestHandler)handlerInstance).processRequestWithDatabaseManager(dbMan, dbMan.getDslContext(), orgId);
 			}
 			else
 			{

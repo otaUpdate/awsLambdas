@@ -14,6 +14,7 @@ import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 
+import net.otaupdate.lambdas.model.db.otaupdates.tables.Apikeys;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Devicetypes;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Firmwareimages;
 import net.otaupdate.lambdas.model.db.otaupdates.tables.Organizations;
@@ -75,6 +76,22 @@ public class DatabaseManager
 		if( result.size() < 1 ) return null;
 		
 		return result.get(0).getValue(Organizations.ORGANIZATIONS.ID);
+	}
+	
+	
+	public UInteger getOrganizationIdForApiKey(String apiKeyIn)
+	{
+		if( apiKeyIn == null ) return null;
+		
+		Result<Record1<UInteger>> result =
+				this.getDslContext().select(Apikeys.APIKEYS.ORGID)
+				.from(Apikeys.APIKEYS)
+				.where(Apikeys.APIKEYS.KEY.eq(apiKeyIn))
+				.limit(1)
+				.fetch();
+		if( result.size() < 1 ) return null;
+		
+		return result.get(0).getValue(Apikeys.APIKEYS.ORGID);
 	}
 	
 	
