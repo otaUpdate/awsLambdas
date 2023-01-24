@@ -4,7 +4,7 @@
 
 	<groupId>net.otaupdate.lambdas</groupId>
 	<artifactId>lambdas</artifactId>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<packaging>jar</packaging>
 
 	<build>
@@ -12,7 +12,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.6.0</version>
+				<version>3.10.1</version>
 				<configuration>
 					<source>1.8</source>
 					<target>1.8</target>
@@ -44,11 +44,13 @@
 			<plugin>
 				<groupId>org.jooq</groupId>
 				<artifactId>jooq-codegen-maven</artifactId>
-				<version>3.9.4</version>
+				<version>3.12.0</version>
 
 				<!-- The plugin should hook into the generate goal -->
 				<executions>
 					<execution>
+						<id>jooq-codegen</id>
+						<phase>generate-sources</phase>
 						<goals>
 							<goal>generate</goal>
 						</goals>
@@ -58,7 +60,7 @@
 				<configuration>
 					<jdbc>
 						<driver>com.mysql.cj.jdbc.Driver</driver>
-						<url>jdbc:mysql://otaupdates.ceoe0hrbkvfu.us-east-2.rds.amazonaws.com/otaUpdates</url>
+						<url>jdbc:mysql://localhost/otaUpdates?useSSL=false</url>
 						<user>otaupdates</user>
 						<password>Ni79rRKgLCKE9WM3</password>
 					</jdbc>
@@ -66,8 +68,8 @@
 					<!-- Generator parameters -->
 					<generator>
 						<database>
-							<name>org.jooq.util.mysql.MySQLDatabase</name>
-							<includes>.*</includes>
+							<name>org.jooq.meta.mysql.MySQLDatabase</name>
+							<includes>(otaUpdates).*</includes>
 							<excludes></excludes>
 							<!-- <inputSchema>otaupdates</inputSchema> -->
 						</database>
@@ -127,12 +129,12 @@
 		<dependency>
 			<groupId>org.jooq</groupId>
 			<artifactId>jooq</artifactId>
-			<version>3.9.4</version>
+			<version>3.12.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jooq</groupId>
 			<artifactId>jooq-codegen</artifactId>
-			<version>3.9.4</version>
+			<version>3.12.0</version>
 		</dependency>
 
 		<dependency>

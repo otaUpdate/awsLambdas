@@ -29,7 +29,7 @@ public class DatabaseManager
 	private static final String DB_HOST = System.getenv("db_endpoint");
 	private static final String DB_USERNAME = System.getenv("db_username");
 	private static final String DB_PASSWORD = System.getenv("db_password");
-	private static final String DB_NAME = "otaUpdates";
+	private static final String DB_NAME = System.getenv("db_name");
 
 
 	private final Connection connection;
@@ -40,7 +40,7 @@ public class DatabaseManager
 	{
 		// Setup the connection with the DB
 		Logger.getSingleton().debug(TAG, "connecting to database...");
-		this.connection = DriverManager.getConnection(String.format("jdbc:mysql://%s/%s", DB_HOST, DB_NAME), DB_USERNAME, DB_PASSWORD);
+		this.connection = DriverManager.getConnection(String.format("jdbc:mysql://%s/%s?verifyServerCertificate=false&useSSL=false", DB_HOST, DB_NAME), DB_USERNAME, DB_PASSWORD);
 		Logger.getSingleton().debug(TAG, "connected to database");
 	}
 
